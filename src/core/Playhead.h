@@ -20,7 +20,7 @@ public:
   int ticks = 0;
   int samplesPerTick;
   bool enabled = true;
-  bool playing = true;
+  bool playing = false;
   unsigned int beatsPerBar = 4;
   unsigned int beatValue = 4;
   shared_ptr<SampledAudioNode> metronomeBeat;

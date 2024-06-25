@@ -14,11 +14,12 @@ namespace tstudio {
     void AudioEngine::init() {
         audioDevices = lab::AudioDevice_RtAudio::MakeAudioDeviceList();
         bool with_input = false;
+
         for (auto &info : audioDevices) {
             if (info.is_default_output)
-            defaultOutputInfo = info;
+                defaultOutputInfo = info;
             if (info.is_default_input)
-            defaultInputInfo = info;
+                defaultInputInfo = info;
         }
         // Create Output Stream Config with desired defaults
         if (defaultOutputInfo.index != -1) {

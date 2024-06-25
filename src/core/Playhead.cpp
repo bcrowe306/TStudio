@@ -1,7 +1,10 @@
 #include "LabSound/LabSound.h"
 #include "core/Playhead.h"
+#include "core/TrackNode.h"
 #include <iostream>
 #include <memory>
+
+
 using namespace lab;
 
 namespace tstudio {
@@ -13,19 +16,21 @@ namespace tstudio {
     metronomeDownBeat = std::make_shared<SampledAudioNode>((*audioContext));
 
     hiHat = MakeBusFromFile(
-        "/Users/brandoncrowe/Documents/Git/TStudio/assets/BVKER - The Astro Perc 10.wav", false,
+        "assets/BVKER - The Astro Perc 10.wav", false,
         audioContext->sampleRate());
     rim = MakeBusFromFile(
-        "/Users/brandoncrowe/Documents/Git/TStudio/assets/BVKER - The Astro Perc 08.wav", false,
+        "assets/BVKER - The Astro Perc 08.wav", false,
         audioContext->sampleRate());
     metronomeBeat->setBus(hiHat);
-
+    metronomeBeat->initialize();
     metronomeDownBeat->setBus(rim);
+    metronomeDownBeat->initialize();
 
     audioContext->connect(  audioContext->destinationNode() , metronomeBeat,0, 0);
     audioContext->connect(audioContext->destinationNode(), metronomeDownBeat, 0,
                           0);
     this->setFunction(callback);
+    this->start(0.f);
   };
 
 
@@ -84,6 +89,8 @@ namespace tstudio {
           playHeadNode->ticks = 0;
         }
       }
+
+      // increase sample counter
       playHeadNode->counter++;
     }
   }

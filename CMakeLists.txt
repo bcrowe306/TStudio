@@ -5,6 +5,13 @@ project(TStudio VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
+add_custom_command(
+        TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/assets
+                ${CMAKE_CURRENT_BINARY_DIR}/assets)
+
+
 # src subdirectories
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src)
 add_subdirectory( ${CMAKE_SOURCE_DIR}/src/core)
@@ -12,10 +19,11 @@ add_subdirectory( ${CMAKE_SOURCE_DIR}/src/hardware)
 add_subdirectory( ${CMAKE_SOURCE_DIR}/src/library)
 add_subdirectory( ${CMAKE_SOURCE_DIR}/src/ui)
 
+
 # LabSound 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/LabSound)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/lib/LabSound/include)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_BINARY_DIR}/bin/LabSound_d.framework/LabSound_d)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_BINARY_DIR}/bin/LabSound_d.framework/LabSound_d)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_BINARY_DIR}/bin/libLabSoundMiniAudio_d.a)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_BINARY_DIR}/bin/libLabSoundRtAudio_d.a)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_BINARY_DIR}/lib/LabSound/third_party/libnyquist/lib/liblibnyquist_d.a)
@@ -47,6 +55,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE stduuid)
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
+
+set(RESOURCE_FILES
+  ${CMAKE_SOURCE_DIR}/assets/BVKER - The Astro Perc 08.wav
+  ${CMAKE_SOURCE_DIR}/assets/BVKER - The Astro Perc 10.wav
+  )
+
 
 
 if(APPLE)
