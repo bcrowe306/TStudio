@@ -20,5 +20,8 @@ namespace tstudio
         MidiMsg(uint8_t byte0, uint8_t byte1, uint8_t byte2, optional<string> device = nullopt, optional<int> index = nullopt)
             : ShortMessage(byte0, byte1, byte2), device(device), index(index){};
         ~MidiMsg();
+        float getUnitVelocity(){
+          return (int)(getVelocity()) / 128.f;
+        }
     };
 }

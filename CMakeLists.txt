@@ -52,6 +52,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::CAIROMM)
 find_package(stduuid CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE stduuid)
 
+# yaml-cpp
+find_package(yaml-cpp CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE yaml-cpp::yaml-cpp)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)

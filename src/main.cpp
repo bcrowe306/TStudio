@@ -1,20 +1,28 @@
 #include "LabSound/LabSound.h"
-#include "LabSound/core/SampledAudioNode.h"
-#include "LabSound/extended/ADSRNode.h"
-#include "LabSound/extended/AudioFileReader.h"
 #include "bw_ap1.h"
 #include "cairomm/cairomm.h"
 #include "core/AudioEngine.h"
 #include "core/MidiEngine.h"
+#include "core/MidiEventRegistry.h"
+#include "core/MidiMsg.h"
+#include "core/MidiMsgFilter.h"
 #include "core/Playhead.h"
+#include "core/SamplerNode.h"
+#include "core/SynthNode.h"
 #include "core/TrackNode.h"
+#include "core/InstrumentDevice.h"
+#include "library/ScrollView.h"
 #include "libusb.h"
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <sys/termios.h>
 #include <termios.h>
 #include <unistd.h>
-
+#include <vector>
+#define CYAN "\x1B[36m"
+#define WHITE "\x1B[37m"
 using namespace tstudio;
 
 void set_raw_mode(termios &original) {
@@ -23,107 +31,131 @@ void set_raw_mode(termios &original) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
+void clear_screen(termios &term) {
+  std::cout << "\x1B[2J";
+}
+
+
 // Function to restore the terminal to its original mode
 void restore_terminal_mode(const termios &original) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &original);
 }
 
 int main(int, char**){
-    auto midiEngine = MidiEngine(true);
-    midiEngine.activate();
-    AudioEngine ae;
-    auto context = ae.activate();
-    auto playHead = make_shared<tstudio::Playhead>(context);
-    auto track1 = TrackNode(context);
-    context->connect(context->destinationNode(), playHead);
+  MidiEventRegistry &mer = MidiEventRegistry::getInstance();
+  auto midiEngine = MidiEngine(true);
+  midiEngine.activate();
+  AudioEngine ae;
+  auto context = ae.activate();
+  auto playHead = make_shared<tstudio::Playhead>(context);
+  auto track1 = TrackNode(context);
+  context->connect(context->destinationNode(), playHead);
+  auto synth = make_shared<SynthNode>(context);
+  auto sample = make_shared<tstudio::SamplerNode>(context, "assets/BVKER - The Astro Perc 08.wav");
+
+  track1.set_instrument(sample);
+  context->connect(context->destinationNode(), track1.output);
+  context->synchronizeConnections();
+
+  termios original;
+  // Get the current terminal settings
+  tcgetattr(STDIN_FILENO, &original);
+
+  // Set the terminal to raw mode
+  set_raw_mode(original);
+
+  namespace fs = std::filesystem;
+
+  fs::path fileDir = "/Users/brandoncrowe/Documents";
+  std::vector<filesystem::directory_entry> dir;
+  ScrollView sv(dir);
+  
+  for (auto &entry: fs::directory_iterator(fileDir)){
+    dir.emplace_back(entry);
+  }
+  sv.render_view();
+  
+  char c;
+  while (true) {
+    // clear_screen(original);
+    // Print the ASCII value of the key pressed
+    std::cout << "You pressed: " << c << " (ASCII: " << static_cast<int>(c)
+              << ")\n";
+    for (size_t i = sv.start; i <= sv.end; i++) {
+      auto &vec = sv.get_vec();
+      if (i == sv.get_cursor()) {
+        std::cout << CYAN;
+        std::cout << dir[i].path().filename().string() << std::endl;
+        std::cout << WHITE;
+      } else {
+        std::cout << dir[i].path().filename().string() << std::endl;
+      }
+    }
+    // Read a single character
+    if (read(STDIN_FILENO, &c, 1) == -1) {
+      perror("read");
+      break;
+    }
+
     
-    // Sampler Code
-    // Create nodes
-    auto sampleBus = MakeBusFromFile("assets/BVKER - The Astro Perc 08.wav", context->sampleRate());
-    auto samplerNode = make_shared<SampledAudioNode>(*context);
 
-    // Configure and chain nodes
-    if(sampleBus){
-      
-      samplerNode->setBus(sampleBus);
+    // Break the loop if 'q' is pressed
+    if (c == '.') {
+      sv.increment();
     }
-    else{
-      std::cout << "Sample not loaded\n";
+    if (c == ',') {
+      sv.decrement();
     }
-
-
-    // Osc
-    auto oscillator = std::make_shared<OscillatorNode>(*context);
-    auto adsr = make_shared<ADSRNode>(*context);
-    adsr->set(.1f, 1, 1, 1, 1, .01f);
-    adsr->gate()->setValueAtTime(0.f, 0.f);
-    auto gain = std::make_shared<GainNode>(*context);
-    gain->gain()->setValue(.5f);
-
-    // osc -> destination
-    context->connect(adsr, oscillator);
-    context->connect(gain, adsr, 0, 0);
-    context->connect(context->destinationNode(), gain, 0, 0);
-
-    oscillator->frequency()->setValueAtTime(440.f,0.f);
-    oscillator->setType(OscillatorType::SINE);
-
-    // context->connect(adsr, samplerNode);
-    context->connect(context->destinationNode(), samplerNode);
-
-    context->synchronizeConnections();
-
-    termios original;
-    // Get the current terminal settings
-    tcgetattr(STDIN_FILENO, &original);
-
-    // Set the terminal to raw mode
-    set_raw_mode(original);
-
-    char c;
-    while (true) {
-      // Read a single character
-      if (read(STDIN_FILENO, &c, 1) == -1) {
-        perror("read");
-        break;
+    if (c == '>') {
+      if (dir[sv.get_cursor()].is_directory()){
+        auto new_dir = dir[sv.get_cursor()];
+        dir.clear();
+        for (auto &entry : fs::directory_iterator(new_dir.path())) {
+          dir.emplace_back(entry);
+        }
+        sv.render_view(true);
       }
-
-      // Print the ASCII value of the key pressed
-      std::cout << "You pressed: " << c << " (ASCII: " << static_cast<int>(c)
-                << ")\n";
-
-      // Break the loop if 'q' is pressed
-      if (c == 'p') {
-        playHead->playing = !playHead->playing;
-      }
-      if (c == 'm') {
-        playHead->enabled = !playHead->enabled;
-      }
-      if (c == '=') {
-        playHead->setTempo(playHead->getTempo() + 1.0f);
-        std::cout << playHead->getTempo();
-      }
-      if (c == '-') {
-        playHead->setTempo(playHead->getTempo() - 1.0f);
-        std::cout << playHead->getTempo();
-      }
-      if (c == 'k') {
-        samplerNode->schedule(0.f);
-      }
-      if (c == 'e') {
-        adsr->gate()->setValueAtTime(1.f, 0.f);
-        oscillator->start(0.f);
-      }
-      if (c == 'r') {
-        adsr->gate()->setValueAtTime(0.f, 0.f);
-        // oscillator->stop(0.f);
-      }
-      if (c == 'q')
-        break;
     }
 
-    // Restore the original terminal settings
-    restore_terminal_mode(original);
+    if (c == '<') {
+      auto entryItem = dir[sv.get_cursor()];
+      if (entryItem.path().has_parent_path()) {
+        auto parentPath = entryItem.path().parent_path();
+        if(parentPath.has_parent_path()){
+          dir.clear();
+          for (auto &entry :
+               fs::directory_iterator(parentPath.parent_path())) {
+            dir.emplace_back(entry);
+          }
+          sv.render_view(true);
+        }
+        
+      }
+    }
 
-    std::cout << "Exiting...\n";
+    if (c == 'p') {
+      playHead->togglePlay();
+    }
+    if (c == 'm') {
+      playHead->enabled = !playHead->enabled;
+    }
+    if (c == '=') {
+      playHead->setTempo(playHead->getTempo() + 1.0f);
+      std::cout << playHead->getTempo();
+    }
+    if (c == '-') {
+      playHead->setTempo(playHead->getTempo() - 1.0f);
+      std::cout << playHead->getTempo();
+    }
+    
+    if (c == 'q')
+      break;
+
+  
+  }
+
+  // Restore the original terminal settings
+  restore_terminal_mode(original);
+
+  std::cout << "Exiting...\n";
 }

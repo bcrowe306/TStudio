@@ -3,6 +3,7 @@
     "cairomm",
     "libusb",
     "rtmidi",
-    "stduuid"
+    "stduuid",
+    "yaml-cpp"
   ]
 }

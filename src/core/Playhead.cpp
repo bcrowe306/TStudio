@@ -1,97 +1,176 @@
-#include "LabSound/LabSound.h"
 #include "core/Playhead.h"
+#include "LabSound/LabSound.h"
+#include "LabSound/extended/FunctionNode.h"
 #include "core/TrackNode.h"
 #include <iostream>
 #include <memory>
-
+#include <string>
 
 using namespace lab;
 
 namespace tstudio {
 
-  Playhead::Playhead(shared_ptr<AudioContext> audioContext) : FunctionNode((*audioContext)) {
-    this->audioContext = audioContext;
-    _setSamplesPerTick();
-    metronomeBeat = std::make_shared<SampledAudioNode>((*audioContext));
-    metronomeDownBeat = std::make_shared<SampledAudioNode>((*audioContext));
+Playhead::Playhead(shared_ptr<AudioContext> audioContext)
+    : FunctionNode((*audioContext)) {
+  this->audioContext = audioContext;
+  _setSamplesPerTick();
+  metronomeBeat = std::make_shared<SampledAudioNode>((*audioContext));
+  metronomeBeat->schedule(0);
+  metronomeDownBeat = std::make_shared<SampledAudioNode>((*audioContext));
+  metronomeDownBeat->schedule(0);
 
-    hiHat = MakeBusFromFile(
-        "assets/BVKER - The Astro Perc 10.wav", false,
-        audioContext->sampleRate());
-    rim = MakeBusFromFile(
-        "assets/BVKER - The Astro Perc 08.wav", false,
-        audioContext->sampleRate());
-    metronomeBeat->setBus(hiHat);
-    metronomeBeat->initialize();
-    metronomeDownBeat->setBus(rim);
-    metronomeDownBeat->initialize();
+  hiHat = MakeBusFromFile("assets/BVKER - The Astro Perc 10.wav", false,
+                          audioContext->sampleRate());
+  rim = MakeBusFromFile("assets/BVKER - The Astro Perc 08.wav", false,
+                        audioContext->sampleRate());
+  metronomeBeat->setBus(hiHat);
+  metronomeBeat->initialize();
+  metronomeDownBeat->setBus(rim);
+  metronomeDownBeat->initialize();
 
-    audioContext->connect(  audioContext->destinationNode() , metronomeBeat,0, 0);
-    audioContext->connect(audioContext->destinationNode(), metronomeDownBeat, 0,
-                          0);
-    this->setFunction(callback);
-    this->start(0.f);
-  };
+  audioContext->connect(audioContext->destinationNode(), metronomeBeat, 0, 0);
+  audioContext->connect(audioContext->destinationNode(), metronomeDownBeat, 0,
+                        0);
+  this->setFunction(callback);
+  this->start(0.f);
+};
 
+Playhead ::~Playhead(){};
 
-  Playhead ::~Playhead(){};
+void Playhead::onMetronomeBeat(bool isDownBeat) {
+  if (enabled) {
+    if (isDownBeat)
+      metronomeDownBeat->schedule(0.f);
+    else
+      metronomeBeat->schedule(0.f);
+  }
+};
 
-
-  void Playhead::onMetronomeBeat(bool isDownBeat) {
-    if (enabled) {
-      if (isDownBeat)
-        metronomeDownBeat->schedule(0.f);
-      else
-        metronomeBeat->schedule(0.f);
+void Playhead::setState(PlayheadState state) {
+  if (state == PlayheadState::RECORDING && preCountBars.get() > 0) {
+    if (_previous_state == PlayheadState::PRECOUNT) {
+      state = PlayheadState::RECORDING;
+    } else if (_previous_state == PlayheadState::PLAYING) {
+      state = PlayheadState::RECORDING;
+    } else {
+      state = PlayheadState::PRECOUNT;
     }
-  };
+  }
+  _state = state;
+  _previous_state = state;
+  eventRegistry.notify("playhead.state", _state);
+}
+void Playhead::play() { setState(PlayheadState::PLAYING); }
+void Playhead::togglePlay() {
+  if (isPlaying()) {
+    stop();
+  } else {
+    play();
+  }
+};
 
-  void Playhead::setTempo(float tempo) {
-    _tempo = tempo;
-    this->_setSamplesPerTick();
-  };
+void Playhead::stop() { setState(PlayheadState::STOPPED); }
 
+void Playhead::record() {
+  if (preCountBars.get() > 0) {
+    setState(PlayheadState::PRECOUNT);
+  } else {
+    setState(PlayheadState::RECORDING);
+  }
+}
 
-  float Playhead::getTempo() { return _tempo; };
+bool Playhead::isPlaying() const {
+  return _state == PlayheadState::PLAYING || _state == PlayheadState::RECORDING;
+}
 
-  bool Playhead::isMod(int numerator, int denomenator) {
-    if (numerator < denomenator) {
-      return numerator == 0;
+bool Playhead::isRecording() const {
+  return _state == PlayheadState::RECORDING ||
+         _state == PlayheadState::PRECOUNT;
+}
+
+void Playhead::setTempo(float tempo) {
+  _tempo = tempo;
+  this->_setSamplesPerTick();
+};
+
+float Playhead::getTempo() { return _tempo; };
+
+bool Playhead::isMod(int numerator, int denomenator) {
+  if (numerator < denomenator) {
+    return numerator == 0;
+  }
+  return numerator % denomenator == 0;
+};
+
+void Playhead::setTimeSignature(){};
+PlayheadState Playhead::getState() { return _state; }
+void Playhead::handleTick() {
+  if (_state == PlayheadState::PRECOUNT) {
+    _generateMetronomeBeats(precount_bar_tick);
+    eventRegistry.notify("playhead.precount_tick", precount_bar_tick);
+    if (precount_bar_tick == __ticksPerBar() * preCountBars.value) {
+      setState(PlayheadState::RECORDING);
+      precount_bar_tick = 0;
+    } else {
+      precount_bar_tick++;
     }
-    return numerator % denomenator == 0;
-  };
+  } else if (_state == PlayheadState::PLAYING ||_state == PlayheadState::RECORDING) {
+    _generateMetronomeBeats(ticks);
+    int launch_quantization_value = LaunchQuantizationHelper::getQuantizeGrid(
+        launchQuantization, beatsPerBar.get());
+    if (ticks % launch_quantization_value == 0) {
+      eventRegistry.notify("playhead.launch", true);
+    }
+    eventRegistry.notify("playhead.tick", ticks);
+    last_play_position_tick = ticks;
+    ticks++;
+  } else if (_state == PlayheadState::STOPPED) {
+    if (stop_mode == StopMode::RETURN_TO_ZERO) {
+      counter = 0;
+      ticks = 0;
+    } else if (stop_mode == StopMode::RETURN_TO_PLAY) {
+      counter = last_play_position_sample;
+      ticks = last_play_position_tick;
+    }
+    precount_bar_tick = 0;
+  }
+}
+void Playhead::_generateMetronomeBeats(int &bar_tick) {
+  int ticks_per_beat = __ticksPerBeat();
+  if (isMod(ticks, ticks_per_beat)) {
+    bool isDownBeat = isMod(ticks, ticks_per_beat * beatsPerBar.value);
+    onMetronomeBeat(isDownBeat);
+    eventRegistry.notify("playhead.metronome", isDownBeat);
+  }
+}
+int Playhead::__ticksPerBeat() const { return tpqn / (beatsPerBar.value / 4); }
 
-  void Playhead::setTimeSignature(){};
+int Playhead::__ticksPerBar() const {
+  return __ticksPerBeat() * beatsPerBar.value;
+}
+void Playhead::callback(ContextRenderLock &r, FunctionNode *me, int channel,
+                        float *buffer, int bufferSize) {
+  auto phn = (Playhead *)me;
 
-  void Playhead::callback(ContextRenderLock &r, FunctionNode *me,
-                                     int channel, float *buffer,
-                                     int bufferSize) {
-    auto playHeadNode = (Playhead *)me;
-
-    for (size_t i = 0; i < bufferSize; i++) {
-      //  istick
-      if (playHeadNode->isMod(playHeadNode->counter,
-                              (int)playHeadNode->samplesPerTick)) {
-
-        // isMetronomebeat
-        if (playHeadNode->isMod(playHeadNode->ticks, playHeadNode->tpqn) &&
-            playHeadNode->playing) {
-          bool isDownBeat = playHeadNode->isMod(playHeadNode->ticks,
-                                                playHeadNode->tpqn *
-                                                    playHeadNode->beatsPerBar);
-          playHeadNode->onMetronomeBeat(isDownBeat);
-        }
-
-        // Only tick if playing is true
-        if (playHeadNode->playing)
-          playHeadNode->ticks++;
-        else {
-          playHeadNode->ticks = 0;
-        }
+  for (size_t i = 0; i < bufferSize; i++) {
+    //  istick
+    if (phn->getState() != PlayheadState::STOPPED) {
+      if (phn->isMod(phn->counter, phn->samplesPerTick))
+        phn->handleTick();
+      // notify("song_pos", song_pos);
+      phn->counter++;
+      phn->last_play_position_sample = phn->counter;
+      ;
+    } else {
+      if (phn->stop_mode == StopMode::RETURN_TO_ZERO) {
+        phn->counter = 0;
+        phn->ticks = 0;
+      } else if (phn->stop_mode == StopMode::RETURN_TO_PLAY) {
+        phn->counter = phn->last_play_position_sample;
+        phn->ticks = phn->last_play_position_sample;
       }
-
-      // increase sample counter
-      playHeadNode->counter++;
+      phn->precount_bar_tick = 0;
     }
   }
 }
+} // namespace tstudio
