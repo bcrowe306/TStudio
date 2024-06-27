@@ -95,7 +95,7 @@ public:
   bool isRecording() const;
 
 private:
-  PlayheadState _state;
+  PlayheadState _state = PlayheadState::STOPPED;
   PlayheadState _previous_state;
   int __ticksPerBeat() const;
 

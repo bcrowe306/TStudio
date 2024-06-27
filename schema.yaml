@@ -1,0 +1,18 @@
+SessionManager:
+  states:
+    - PLAYING
+    - RECORDING
+    - STOPPING
+  events:
+    ACTIVATE_CELL
+    STOP_ALL_CLIPS
+    STOP_CLIP
+
+O- O- O- O- O-  y = scenes
+O- O- O- O- O- 
+O- O- O- O- O- 
+O- O- O- O- O- 
+
+x = tracks
+
+nd dim1= x, dim2=y

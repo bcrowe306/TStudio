@@ -7,6 +7,7 @@
 #include "LabSound/core/AudioNode.h"
 #include "LabSound/core/GainNode.h"
 #include "LabSound/core/OscillatorNode.h"
+#include "LabSound/core/PannerNode.h"
 #include "LabSound/core/SampledAudioNode.h"
 #include "LabSound/extended/ADSRNode.h"
 #include "LabSound/extended/AudioFileReader.h"
@@ -29,7 +30,9 @@ public:
   shared_ptr<AudioBus> audioBus;
   shared_ptr<SampledAudioNode> sampledAudioNode;
   shared_ptr<ADSRNode> adsr;
-  shared_ptr<GainNode> gain;
+  shared_ptr<PannerNode> panNode;
+  shared_ptr<GainNode> velocityNode;
+  shared_ptr<GainNode> gainNode;
   SamplerNode(shared_ptr<AudioContext> context, std::string audioFilePath) :
         audioFilePath(audioFilePath), InstrumentDevice(context) 
   {
@@ -43,12 +46,18 @@ public:
     // adsr = make_shared<ADSRNode>(*audioContext);
     // adsr->set(.1f, 1, 10.f, 5000.f, 0.f, .01f);
     // adsr->gate()->setValueAtTime(0.f, 0.f);
-    gain = make_shared<GainNode>(*audioContext);
-    gain->gain()->setValue(.5f);
+    velocityNode = make_shared<GainNode>(*audioContext);
+    gainNode = make_shared<GainNode>(*audioContext);
+    panNode = make_shared<PannerNode>(*audioContext);
+    
+    velocityNode->gain()->setValue(.5f);
+    gainNode->gain()->setValue(.5f);
 
     // osc -> destination
-    audioContext->connect(gain, sampledAudioNode);
-    audioContext->connect(output, gain, 0, 0);
+    audioContext->connect(velocityNode, sampledAudioNode);
+    audioContext->connect(gainNode, velocityNode);
+    audioContext->connect(panNode, gainNode);
+    audioContext->connect(output, panNode, 0, 0);
   }
 
   void loadAudioFile(std::string filePath){
@@ -66,8 +75,8 @@ public:
   void onMidiMsg(tstudio::MidiMsg &msg) override {
     auto freq = msg.getNoteNumber().getFrequency();
     if (msg.isNoteOn()) {
-      
-      gain->gain()->setValueAtTime(msg.getUnitVelocity(),  0.f);
+
+      velocityNode->gain()->setValueAtTime(msg.getUnitVelocity(), 0.f);
       sampledAudioNode->schedule(0.f);
     }
     if (msg.isNoteOff()) {
