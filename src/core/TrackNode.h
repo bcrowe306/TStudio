@@ -10,6 +10,7 @@
 #include "LabSound/core/GainNode.h"
 #include "LabSound/core/StereoPannerNode.h"
 #include "core/InstrumentDevice.h"
+#include "core/MidiClip.h"
 #include "core/MidiEventRegistry.h"
 #include "core/MidiMsg.h"
 #include "core/MidiMsgFilter.h"
@@ -18,12 +19,14 @@
 #include "uuid.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 
 
 using namespace lab;
 using namespace placeholders;
 using std::make_shared;
+using std::vector;
 using std::shared_ptr;
 using std::string;
 
@@ -43,15 +46,17 @@ namespace tstudio {
         shared_ptr<AnalyserNode> input;
         shared_ptr<AnalyserNode> output;
         shared_ptr<AudioContext> context;
-
+        vector<shared_ptr<MidiClip>> clips;
         tstudio::MidiEventRegistry &midiEventRegistry;
         tstudio::MidiMsgFilter midiMsgFilter;
         TrackNode(shared_ptr<AudioContext> context);
+        void add_clip(shared_ptr<MidiClip>);
+        void remove_clip(shared_ptr<MidiClip>);
         void set_midi_device(std::string device);
         void set_midi_channel(uint8_t channel);
         void set_instrument(shared_ptr<InstrumentDevice> instrument);
         void onMidiMsg(MidiMsg &msg);
-
+        void onMidiClipEvents(MidiMsg &);
     };
 } // namespace tstudio
 

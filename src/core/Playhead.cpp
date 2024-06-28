@@ -39,10 +39,14 @@ Playhead ::~Playhead(){};
 
 void Playhead::onMetronomeBeat(bool isDownBeat) {
   if (enabled) {
-    if (isDownBeat)
+    if (isDownBeat){
       metronomeDownBeat->schedule(0.f);
-    else
+
+    }
+    else {
       metronomeBeat->schedule(0.f);
+      
+    }
   }
 };
 
@@ -59,8 +63,10 @@ void Playhead::setState(PlayheadState state) {
   _state = state;
   _previous_state = state;
   eventRegistry.notify("playhead.state", _state);
+  std::cout << PlayheadStateMap[_state] << std::endl;
 }
 void Playhead::play() { setState(PlayheadState::PLAYING); }
+
 void Playhead::togglePlay() {
   if (isPlaying()) {
     stop();
@@ -69,10 +75,18 @@ void Playhead::togglePlay() {
   }
 };
 
+void Playhead::toggleRecord() {
+  if (isRecording()) {
+    play();
+  } else {
+    record();
+  }
+};
+
 void Playhead::stop() { setState(PlayheadState::STOPPED); }
 
 void Playhead::record() {
-  if (preCountBars.get() > 0) {
+  if (preCountBars.get() > 0 and _state != PlayheadState::PLAYING) {
     setState(PlayheadState::PRECOUNT);
   } else {
     setState(PlayheadState::RECORDING);
@@ -105,22 +119,25 @@ bool Playhead::isMod(int numerator, int denomenator) {
 void Playhead::setTimeSignature(){};
 PlayheadState Playhead::getState() { return _state; }
 void Playhead::handleTick() {
+  
   if (_state == PlayheadState::PRECOUNT) {
-    _generateMetronomeBeats(precount_bar_tick);
-    eventRegistry.notify("playhead.precount_tick", precount_bar_tick);
     if (precount_bar_tick == __ticksPerBar() * preCountBars.value) {
       setState(PlayheadState::RECORDING);
       precount_bar_tick = 0;
     } else {
+      eventRegistry.notify("playhead.precount_tick", precount_bar_tick);
+      _generateMetronomeBeats(precount_bar_tick);
       precount_bar_tick++;
     }
+    ticks = 0;
   } else if (_state == PlayheadState::PLAYING ||_state == PlayheadState::RECORDING) {
-    _generateMetronomeBeats(ticks);
+    
     int launch_quantization_value = LaunchQuantizationHelper::getQuantizeGrid(
-        launchQuantization, beatsPerBar.get());
+        launchQuantization, time_sig.first);
     if (ticks % launch_quantization_value == 0) {
       eventRegistry.notify("playhead.launch", true);
     }
+    _generateMetronomeBeats(ticks);
     eventRegistry.notify("playhead.tick", ticks);
     last_play_position_tick = ticks;
     ticks++;
@@ -137,16 +154,16 @@ void Playhead::handleTick() {
 }
 void Playhead::_generateMetronomeBeats(int &bar_tick) {
   int ticks_per_beat = __ticksPerBeat();
-  if (isMod(ticks, ticks_per_beat)) {
-    bool isDownBeat = isMod(ticks, ticks_per_beat * beatsPerBar.value);
+  if (isMod(bar_tick, ticks_per_beat)) {
+    bool isDownBeat = isMod(bar_tick, ticks_per_beat * time_sig.first);
     onMetronomeBeat(isDownBeat);
     eventRegistry.notify("playhead.metronome", isDownBeat);
   }
 }
-int Playhead::__ticksPerBeat() const { return tpqn / (beatsPerBar.value / 4); }
+int Playhead::__ticksPerBeat() const { return tpqn / (time_sig.first / 4); }
 
 int Playhead::__ticksPerBar() const {
-  return __ticksPerBeat() * beatsPerBar.value;
+  return __ticksPerBeat() * time_sig.first;
 }
 void Playhead::callback(ContextRenderLock &r, FunctionNode *me, int channel,
                         float *buffer, int bufferSize) {
@@ -167,7 +184,7 @@ void Playhead::callback(ContextRenderLock &r, FunctionNode *me, int channel,
         phn->ticks = 0;
       } else if (phn->stop_mode == StopMode::RETURN_TO_PLAY) {
         phn->counter = phn->last_play_position_sample;
-        phn->ticks = phn->last_play_position_sample;
+        phn->ticks = phn->last_play_position_tick;
       }
       phn->precount_bar_tick = 0;
     }

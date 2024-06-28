@@ -1,4 +1,5 @@
 #include "core/TrackNode.h"
+#include "core/MidiMsg.h"
 
 using namespace lab;
 using namespace placeholders;
@@ -30,8 +31,19 @@ namespace tstudio {
     this->context->connect(output, this->instrument->output);
   }
   void TrackNode::onMidiMsg(MidiMsg &msg) {
+
     if (instrument.get() != nullptr && arm.get()) {
       instrument->onMidiMsg(msg);
+    }
+    for(auto clip : clips){
+      if(clip.get()){
+        clip->midiInEvent(msg);
+      }
+    }
+  }
+  void TrackNode::onMidiClipEvents(MidiMsg &event){
+    if(instrument){
+      instrument->onMidiMsg(event);
     }
   }
 }; // namespace tstudio

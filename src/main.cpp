@@ -3,6 +3,7 @@
 #include "cairomm/cairomm.h"
 #include "core/AudioEngine.h"
 #include "core/InstrumentDevice.h"
+#include "core/MidiClip.h"
 #include "core/MidiEngine.h"
 #include "core/MidiEventRegistry.h"
 #include "core/MidiMsg.h"
@@ -13,6 +14,7 @@
 #include "core/TrackNode.h"
 #include "library/ScrollView.h"
 #include "libusb.h"
+#include <__functional/bind_front.h>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -24,7 +26,9 @@
 #include <vector>
 #define CYAN "\x1B[36m"
 #define WHITE "\x1B[37m"
+
 using namespace tstudio;
+using namespace placeholders;
 using std::getenv;
 void set_raw_mode(termios &original) {
   termios raw = original;
@@ -54,8 +58,10 @@ int main(int, char **) {
 
   // Tracks vector
   vector<shared_ptr<TrackNode>> tracks;
-
+  auto clip = make_shared<MidiClip>(playHead,"test");
   track1.set_instrument(sample);
+  clip->setMidiOutCallback( std::bind(&TrackNode::onMidiClipEvents, track1, _1) );
+  track1.clips.push_back(clip);
   context->connect(context->destinationNode(), track1.output);
   context->synchronizeConnections();
 
@@ -76,24 +82,23 @@ int main(int, char **) {
     dir.emplace_back(entry);
   }
   sv.render_view();
-
   char c;
   while (true) {
-    clear_screen(original);
+    // clear_screen(original);
     // Print the ASCII value of the key pressed
     std::cout << tracks.size() << std::endl;
     std::cout << "You pressed: " << c << " (ASCII: " << static_cast<int>(c)
               << ")\n";
-    for (size_t i = sv.start; i <= sv.end; i++) {
-      auto &vec = sv.get_vec();
-      if (i == sv.get_cursor()) {
-        std::cout << CYAN;
-        std::cout << dir[i].path().filename().string() << std::endl;
-        std::cout << WHITE;
-      } else {
-        std::cout << dir[i].path().filename().string() << std::endl;
-      }
-    }
+    // for (size_t i = sv.start; i <= sv.end; i++) {
+    //   auto &vec = sv.get_vec();
+    //   if (i == sv.get_cursor()) {
+    //     std::cout << CYAN;
+    //     std::cout << dir[i].path().filename().string() << std::endl;
+    //     std::cout << WHITE;
+    //   } else {
+    //     std::cout << dir[i].path().filename().string() << std::endl;
+    //   }
+    // }
     // Read a single character
     if (read(STDIN_FILENO, &c, 1) == -1) {
       perror("read");
@@ -134,6 +139,15 @@ int main(int, char **) {
 
     if (c == 'p') {
       playHead->togglePlay();
+      if(playHead->getState() == PlayheadState::PLAYING){
+        clip->setState(ClipState::PLAYING);
+      }else{
+        clip->setState(ClipState::STOPPED);
+      }
+    }
+    if (c == 'r') {
+      clip->setState(ClipState::INITIALRECORDING);
+      playHead->toggleRecord();
     }
     if (c == 'm') {
       playHead->enabled = !playHead->enabled;

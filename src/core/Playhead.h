@@ -14,11 +14,13 @@
 #include <memory>
 #include <map>
 #include <unordered_map>
+#include <utility>
 using namespace lab;
 using std::shared_ptr;
 using std::function;
 using std::string;
 using std::unordered_map;
+using std::pair;
 namespace tstudio {
 
 enum class LaunchQuantization {
@@ -32,7 +34,7 @@ enum class LaunchQuantization {
   Sixteenth
 };
 enum class PlayheadState { PLAYING, STOPPED, RECORDING, PRECOUNT };
-const unordered_map<PlayheadState, string>PlayheadStateMap = {
+static unordered_map<PlayheadState, string>PlayheadStateMap = {
   {PlayheadState::PLAYING, "PLAYING"},
   {PlayheadState::STOPPED, "STOPPED"},
   {PlayheadState::RECORDING, "RECORDING"},
@@ -55,9 +57,8 @@ public:
   int last_play_position_tick = 0;
   StopMode stop_mode = StopMode::RETURN_TO_ZERO;
   LaunchQuantization launchQuantization = LaunchQuantization::Bar;
-  IntParam preCountBars = IntParam{"preCountBars", "Pre Count Bars", 0, "Text"};
-  IntParam beatsPerBar = IntParam{"beatsPerBar", "beatsPerBar", 4, "Text"};
-  IntParam beatValue = IntParam{"beatValue", "beatValue", 4, "Text"};
+  pair<unsigned int, unsigned int> time_sig = pair(4,4);
+  IntParam preCountBars = IntParam{"preCountBars", "Pre Count Bars", 1, "Text"};
   IntParam quantizeValue = IntParam{"quantizeValue", "quantizeValue", 16, "Text"};
   BoolParam inputQuantize = BoolParam{"inputQuantize", "inputQuantize", true, "Text"};
   BoolParam quantizeStart = BoolParam{"quantizeStart", "quantizeStart", true, "Text"};
@@ -91,6 +92,7 @@ public:
   void stop();
   void togglePlay();
   void record();
+  void toggleRecord();
   bool isPlaying() const;
   bool isRecording() const;
 

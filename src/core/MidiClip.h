@@ -1,6 +1,8 @@
 #ifndef MIDICLIP_H
 #define MIDICLIP_H
-#pragma once
+#include "core/Playhead.h"
+#include <any>
+#include <unordered_map>
 #include <string>
 #include <map>
 #include <vector>
@@ -8,19 +10,59 @@
 #include <memory>
 #include <utility>
 #include "core/ClipEvent.h"
-#include "library/EventRegistry.h"
 #include "core/MidiMsg.h"
-#include "daw/RecordPlayOptions.h"
-#include "daw/AppStates.h"
+#include "library/EventRegistry.h"
 
-class MidiClip
-{
-public:
-    MidiClip(const std::string &name, int length_in_bars = 0, std::pair<int, int> time_sig = {4, 4});
-    template <class... Types>
-    void notify(const std::string &event_id, Types &...args);
-    void resetLoopClip();
+using std::shared_ptr;
+using std::string;
+using std::make_shared;
+using std::function;
+using std::bind;
+using std::pair;
+using std::unordered_map;
+using std::map;
+using std::vector;
+using std::any;
+using std::any_cast;
 
+namespace tstudio {
+  enum class ClipState {
+    STOPPING,
+    STOPPED,
+    LAUNCHING,
+    LAUNCHRECORDING,
+    NEWRECORDING,
+    RECORDING,
+    PLAYING,
+    DISABLED,
+    INITIALRECORDING
+  };
+
+  static unordered_map<ClipState, string> ClipStateMap = {
+    {ClipState::STOPPING, "STOPPING"},
+    {ClipState::STOPPED, "STOPPED"},
+    {ClipState::LAUNCHING, "LAUNCHING"},
+    {ClipState::LAUNCHRECORDING, "LAUNCHRECORDING"},
+    {ClipState::NEWRECORDING, "NEWRECORDING"},
+    {ClipState::RECORDING, "RECORDING"},
+    {ClipState::PLAYING, "PLAYING"},
+    {ClipState::DISABLED, "DISABLED"},
+    {ClipState::INITIALRECORDING, "INITIALRECORDING"},
+  };
+
+  
+
+  class MidiClip : public EventBase {
+  public:
+    unordered_map<int, vector<ClipEvent>> data;
+    unordered_map<int, ClipEvent> note_map;
+    string name;
+
+    // Contructors
+    MidiClip(shared_ptr<Playhead> playhead, const string &, int length_in_bars=0,
+             ClipState state = ClipState::STOPPED);
+
+    // Methods
     void clipPlayingState();
     void clipInitialRecordingState();
     void clipRecordingState();
@@ -30,56 +72,68 @@ public:
     void clipNewRecordingState();
     void clipStoppingState();
     void clipStoppedState();
-
-    void setMidiOutCallback(std::function<void(MidiMsg)> callback);
-
-    void onPlayheadStateChange(PlayheadState state);
-    void incTickCounter(/*SongPos song_pos*/);
-    void onPrecountTick(/*SongPos song_pos*/);
-
-    std::tuple<int, int, int> getPosition() const;
-    void setLength();
-    void increaseLength();
-
-    std::pair<int, int> getTimeSig() const;
-    void setTimeSig(const std::pair<int, int> &time_sig);
-
-    void onMidiInEvent(const MidiMsg &event);
-    void recordPrecount(const MidiMsg &event);
-    void record(const MidiMsg &event);
-    void recordEvent(const ClipEvent &event);
-
-    void play();
-    void sendMidiOut(const MidiMsg &event);
-
     ClipState getState() const;
-    void setState(ClipState state);
-
+    void increaseLength();
+    void incTickCounter(/*SongPos song_pos*/);
     int getLength() const;
-    void setLength(int length);
-
     float getLengthInBars() const;
+    void midiInEvent(MidiMsg &);
+    void notify(const string &, any);
+    void onPlayheadStateChange(any );
+    std::tuple<int, int, int> getPosition() const;
+    void onPrecountTick(/*SongPos song_pos*/);
+    void onTimeSigChange(const pair<int, int> &);
+    void play();
+    void record(MidiMsg &);
+    void recordPrecount(MidiMsg);
+    void recordEvent(ClipEvent);
+    void resetLoopClip();
+    void setLength();
+    void setLength(int );
+    void sendMidiOut(MidiMsg &);
+    void setMidiOutCallback(std::function<void(MidiMsg &)> );
+    void setState(ClipState );
 
-private:
-    void quantizeClipLength(ClipState state);
+  private:
 
-    std::string name;
+    ClipState state = ClipState::STOPPED;
+    int counter = 0;
     int length_in_bars;
-    std::pair<int, int> time_sig;
-    int tick_counter;
-    int precount_tick_counter;
-    bool looping;
-    std::shared_ptr<EventRegistry> event_registry;
-    PlayheadState playhead_state;
-    ClipState state;
-    int tpqn;
-    std::map<int, std::vector<ClipEvent>> data;
-    std::shared_ptr<RecordPlayOptions> record_options;
-    std::map<int, ClipEvent> note_map;
+    bool looping = true;
+    int precounter = 0;
+    shared_ptr<Playhead> playhead;
     float ticksPerBeat;
-    std::function<void(MidiMsg)> onMidiClipOut;
     int length;
-    std::map<ClipState, std::function<void()>> clip_state_map;
-};
+    function<void(MidiMsg &)> onMidiClipOut;
+    unordered_map<ClipState, function<void()>> clip_state_map = {
+        {ClipState::PLAYING, bind(&MidiClip::clipPlayingState, this)},
+        {ClipState::RECORDING, bind(&MidiClip::clipRecordingState, this)},
+        {ClipState::LAUNCHING, bind(&MidiClip::clipLaunchingState, this)},
+        {ClipState::NEWRECORDING,
+         bind(&MidiClip::clipNewRecordingState, this)},
+        {ClipState::LAUNCHRECORDING,
+         bind(&MidiClip::clipLaunchRecordingState, this)},
+        {ClipState::STOPPED, bind(&MidiClip::clipStoppedState, this)},
+        {ClipState::STOPPING, bind(&MidiClip::clipStoppingState, this)},
+        {ClipState::INITIALRECORDING,
+         bind(&MidiClip::clipInitialRecordingState, this)},
+        {ClipState::DISABLED, bind(&MidiClip::clipDisabledState, this)},
+    };
+    void quantizeClipLength(ClipState );
+  };
+
+}
+
+static int Quantize(int delta, int quantize_value = 16, float strength = 1.0,
+                    int tpqn = 480) {
+    float resolution = 1.0 / (quantize_value / 4.0);
+    int grid_tick_size = std::round(tpqn * resolution);
+    int quantized_delta =
+        std::round(static_cast<float>(delta) / grid_tick_size) * grid_tick_size;
+    int note_spread = quantized_delta - delta;
+    int shift_amount = std::round(note_spread * strength);
+    int new_delta = shift_amount + delta;
+    return new_delta;
+}
 
 #endif // MIDICLIP_H
