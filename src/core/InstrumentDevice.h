@@ -1,6 +1,7 @@
 #ifndef INSTRUMENTDEVICE_H
 #define INSTRUMENTDEVICE_H
 #include "core/MidiMsg.h"
+#include "core/MidiNode.h"
 #include "LabSound/LabSound.h"
 #include <memory>
 
@@ -11,7 +12,7 @@ using namespace lab;
 namespace tstudio {
 
     // An interface that defines an InstrumentDevice. Must implement onMidiMsg
-    class InstrumentDevice {
+    class InstrumentDevice : public MidiNode {
     public:
       shared_ptr<AnalyserNode> output;
       shared_ptr<AudioContext> context;
@@ -22,7 +23,6 @@ namespace tstudio {
       };
       virtual ~InstrumentDevice() = default;
 
-      virtual void onMidiMsg(MidiMsg &msg) = 0;
     };
 
 }

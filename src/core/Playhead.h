@@ -33,7 +33,7 @@ enum class LaunchQuantization {
   Eighth,
   Sixteenth
 };
-enum class PlayheadState { PLAYING, STOPPED, RECORDING, PRECOUNT };
+const enum class PlayheadState { PLAYING, STOPPED, RECORDING, PRECOUNT };
 static unordered_map<PlayheadState, string>PlayheadStateMap = {
   {PlayheadState::PLAYING, "PLAYING"},
   {PlayheadState::STOPPED, "STOPPED"},

@@ -6,4 +6,6 @@ target_sources(TStudio PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Playhead.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TrackNode.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MidiClip.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/MidiNode.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Session.cpp
 )

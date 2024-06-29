@@ -63,7 +63,8 @@ void Playhead::setState(PlayheadState state) {
   _state = state;
   _previous_state = state;
   eventRegistry.notify("playhead.state", _state);
-  std::cout << PlayheadStateMap[_state] << std::endl;
+  auto message = "Playhead: " + PlayheadStateMap[_state] + "\n";
+  LOG_TRACE(message.c_str());
 }
 void Playhead::play() { setState(PlayheadState::PLAYING); }
 

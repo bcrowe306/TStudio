@@ -14,5 +14,8 @@
     },
     "vcpkg.target.installDependencies": true,
     "vcpkg.target.preferSystemLibs": false,
-    "vcpkg.target.useManifest": true
+    "vcpkg.target.useManifest": true,
+    "files.associations": {
+        "ostream": "cpp"
+    }
 }

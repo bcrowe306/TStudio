@@ -2,17 +2,13 @@
 #include "bw_ap1.h"
 #include "cairomm/cairomm.h"
 #include "core/AudioEngine.h"
-#include "core/InstrumentDevice.h"
 #include "core/MidiClip.h"
 #include "core/MidiEngine.h"
 #include "core/MidiEventRegistry.h"
 #include "core/MidiMsg.h"
-#include "core/MidiMsgFilter.h"
 #include "core/Playhead.h"
-#include "core/SamplerNode.h"
-#include "core/SynthNode.h"
-#include "core/TrackNode.h"
 #include "library/ScrollView.h"
+#include "core/Session.h"
 #include "libusb.h"
 #include <__functional/bind_front.h>
 #include <cstdlib>
@@ -44,26 +40,20 @@ void restore_terminal_mode(const termios &original) {
 }
 
 int main(int, char **) {
+
+  // Daw Setup Code
   MidiEventRegistry &mer = MidiEventRegistry::getInstance();
   auto midiEngine = MidiEngine(true);
   midiEngine.activate();
   AudioEngine ae;
   auto context = ae.activate();
   auto playHead = make_shared<tstudio::Playhead>(context);
-  auto track1 = TrackNode(context);
   context->connect(context->destinationNode(), playHead);
-  auto synth = make_shared<SynthNode>(context);
-  auto sample = make_shared<tstudio::SamplerNode>(
-      context, "assets/BVKER - The Astro Perc 08.wav");
 
-  // Tracks vector
-  vector<shared_ptr<TrackNode>> tracks;
-  auto clip = make_shared<MidiClip>(playHead,"test");
-  track1.set_instrument(sample);
-  clip->setMidiOutCallback( std::bind(&TrackNode::onMidiClipEvents, track1, _1) );
-  track1.clips.push_back(clip);
-  context->connect(context->destinationNode(), track1.output);
+  auto session = make_shared<Session>(context, playHead);
+  context->connect(context->destinationNode(), session->output);
   context->synchronizeConnections();
+
 
   termios original;
   // Get the current terminal settings
@@ -86,7 +76,6 @@ int main(int, char **) {
   while (true) {
     // clear_screen(original);
     // Print the ASCII value of the key pressed
-    std::cout << tracks.size() << std::endl;
     std::cout << "You pressed: " << c << " (ASCII: " << static_cast<int>(c)
               << ")\n";
     // for (size_t i = sv.start; i <= sv.end; i++) {
@@ -140,13 +129,10 @@ int main(int, char **) {
     if (c == 'p') {
       playHead->togglePlay();
       if(playHead->getState() == PlayheadState::PLAYING){
-        clip->setState(ClipState::PLAYING);
       }else{
-        clip->setState(ClipState::STOPPED);
       }
     }
     if (c == 'r') {
-      clip->setState(ClipState::INITIALRECORDING);
       playHead->toggleRecord();
     }
     if (c == 'm') {
@@ -159,16 +145,6 @@ int main(int, char **) {
     if (c == '-') {
       playHead->setTempo(playHead->getTempo() - 1.0f);
       std::cout << playHead->getTempo();
-    }
-    if (c == 'k') {
-      sample->sampledAudioNode->schedule(0,.01,0);
-    }
-    if (c == 't') {
-      auto t = tracks.emplace_back(make_shared<tstudio::TrackNode>(context));
-      t->set_instrument(make_shared<tstudio::SamplerNode>(
-          context, "assets/BVKER - The Astro Perc 08.wav"));
-      context->connect(context->destinationNode(), t->output);
-      
     }
 
     if (c == 'q')

@@ -50,7 +50,6 @@ public:
   }
 
   void onMidiMsg(tstudio::MidiMsg msg) {
-    // std::cout << msg.getDescription() << std::endl;
     if(enabled){
       auto freq = msg.getNoteNumber().getFrequency();
       if (msg.isNoteOn()) {

@@ -26,7 +26,7 @@ public:
   // Subscribe to an event with a specific event ID
   HandlerId subscribe(const std::string &event_id,
                       const std::function<void(std::any)> &handler) {
-    std::lock_guard<std::mutex> lock(mtx);
+    // std::lock_guard<std::mutex> lock(mtx);
     HandlerId id = nextHandlerId++;
     handlers[event_id].emplace_back(id, handler);
     return id;
@@ -34,7 +34,7 @@ public:
 
   // Unsubscribe from an event with a specific event ID
   void unsubscribe(const std::string &event_id, HandlerId id) {
-    std::lock_guard<std::mutex> lock(mtx);
+    // std::lock_guard<std::mutex> lock(mtx);
     auto &handlerList = handlers[event_id];
     handlerList.erase(
         std::remove_if(handlerList.begin(), handlerList.end(),
@@ -47,7 +47,7 @@ public:
 
   // Notify all subscribers of a specific event with data
   void notify(const std::string &event_id, std::any data) {
-    std::lock_guard<std::mutex> lock(mtx);
+    // std::lock_guard<std::mutex> lock(mtx);
     auto it = handlers.find(event_id);
     if (it != handlers.end()) {
       for (const auto &[id, handler] : it->second) {

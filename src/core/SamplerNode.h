@@ -67,21 +67,23 @@ public:
       sampledAudioNode->setBus(audioBus);
     }else
     {
-      std::cout << "Audio File: " << filePath << "Failed to load\n";
+      std::string message = "Failed to load audio file : " + filePath + " \n";
+      LOG_ERROR(message.c_str());
     }
   }
 
-
-  void onMidiMsg(tstudio::MidiMsg &msg) override {
+  MidiMsg process(MidiMsg &msg){
     auto freq = msg.getNoteNumber().getFrequency();
-    if (msg.isNoteOn()) {
-
+    if (msg.isNoteOn())
+    {
       velocityNode->gain()->setValueAtTime(msg.getUnitVelocity(), 0.f);
       sampledAudioNode->schedule(0.f);
     }
-    if (msg.isNoteOff()) {
+    if (msg.isNoteOff())
+    {
       // sampledAudioNode->clearSchedules();
     }
+    return msg;
   }
 };
 }; // namespace tstudio
