@@ -9,6 +9,7 @@
 #include "library/UUID_Gen.h"
 #include "library/Parameter.h"
 #include "library/EventRegistry.h"
+#include <utility>
 #include <vector>
 #include <string>
 #include <memory>
@@ -24,8 +25,8 @@ using std::any;
 // TODO: Implement Undo/Redo - Command Pattern
 
 namespace tstudio {
-    struct Scene : public EventBase {
-        Scene() :id(GenerateUUID()), EventBase() {}
+    struct Scene {
+        Scene() :id(GenerateUUID()) {}
         uuid id;
         StringParam name = StringParam("name", "Name", "", "Text");
         FloatParam tempo = FloatParam("tempo", "Tempo", 120.f, "Text");
@@ -54,7 +55,8 @@ namespace tstudio {
         void reorderTrack(int startIndex, int endIndex);
         shared_ptr<TrackNode> selectedTrack();
         shared_ptr<TrackNode> selectTrack(int);
-        Scene& selectScene(int); // TODO: Implement
+        Scene selectScene(int);
+        Scene selectedScene();
 
         // Get the index of the currently selected track
         int selectedTrackIndex() const {return m_selectedTrackIndex;};
@@ -63,7 +65,7 @@ namespace tstudio {
         int selectedSceneIndex() const { return m_selectedSceneIndex; };
 
         // Create a new scene
-        Scene& addScene();
+        Scene addScene();
 
         // Navigate to next track in the vector, selecting it. Will loop to
         // beginning if end is reached
@@ -81,20 +83,28 @@ namespace tstudio {
         void prevScene();
 
         // Delete scene
-        void deleteScene(); // TODO: Implement
+        void deleteScene(); 
 
         // Create a clip in the current position
         shared_ptr<MidiClip> addClip();
 
         // Delete clip in the current position
-        shared_ptr<MidiClip> deleteClip(); // TODO: Implement
+        void deleteClip();
+
+        // Deletes clip in the provided position.
+        void deleteClipAtPosition(std::pair<int, int>); 
+
+        // Delete clip by clips index
+        void deleteClipAtIndex(int);
 
         // Select clip by the clip index. This index is the index of the clips vector
         shared_ptr<MidiClip> selectClipByIndex(int);
 
+        // Gets the clip at the provided position std::pair<int trackIndex, int sceneIndex>. Return nullptr if no clip is found.
+        shared_ptr<MidiClip> selectClipByPosition(std::pair<int, int> clipPosition);
+
         // Gets the clip at the current track and scene index.
         // If no clip is present, returns nullptr.
-        shared_ptr<MidiClip> selectClipByPosition();
         shared_ptr<MidiClip> selectedClip();
     private:
 

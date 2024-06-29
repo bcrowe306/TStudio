@@ -2,7 +2,9 @@
 #include "LabSound/extended/Logging.h"
 #include "core/SamplerNode.h"
 #include "core/Session.h"
+#include <algorithm>
 #include <any>
+#include <utility>
 
 using namespace placeholders;
 namespace tstudio {
@@ -45,9 +47,10 @@ namespace tstudio {
         context->synchronizeConnections();
 
         // Get trackIndex and set
-        // TODO: Implement Track creation event
-        selectTrack(tracks.size() - 1);
-        
+        auto newTrackIndex = tracks.size() - 1;
+        auto trackPtr = selectTrack(newTrackIndex);
+        eventRegistry.notify("session.track_created", newTrackIndex);
+
         return newTrack;
     }
     void Session::nextTrack(){
@@ -66,6 +69,11 @@ namespace tstudio {
         auto track = selectTrack(newIndex);
         std::cout << newIndex << " : " << track->name.value << std::endl;
     };
+
+    Scene Session::selectedScene(){
+        return scenes[m_selectedSceneIndex];
+    };
+
     void Session::nextScene(){
       auto index = selectedSceneIndex();
       auto sceneLength = scenes.size();
@@ -82,18 +90,49 @@ namespace tstudio {
       auto scene = selectScene(m_selectedSceneIndex);
       std::cout << m_selectedSceneIndex << " : " << scene.name.value << std::endl;
     };
-    Scene& Session::addScene()
+    Scene Session::addScene()
     {
         auto newSceneIndex = std::to_string(scenes.size() + 1);
         auto newScene = Scene();
         newScene.name.set("Scene " + newSceneIndex);
-        scenes.emplace_back(newScene);
-
+        scenes.push_back(newScene);
         m_selectedSceneIndex = scenes.size() - 1;
-        // TODO: Implement Scene Creation event
-        return scenes[m_selectedSceneIndex];
+        eventRegistry.notify("session.scene_create", m_selectedSceneIndex);
+        return selectedScene();
+    }
+    void Session::deleteScene(){
+        Scene scene = scenes[m_selectedSceneIndex];
+        try
+        {
+          scenes.erase(scenes.begin() + m_selectedSceneIndex);
+          eventRegistry.notify("session.scene_deleted", m_selectedSceneIndex);
+        }
+        catch (const std::exception&)
+        {
+            LOG_ERROR("Scene deletion failed");
+        }
     }
 
+    Scene Session::selectScene(int index) {
+      bool isValidIndex = true;
+
+      try {
+        auto scene = scenes.at(index);
+      } catch (const std::exception &) {
+        isValidIndex = false;
+      }
+
+      if (isValidIndex) {
+        m_selectedSceneIndex = index;
+        return scenes[m_selectedSceneIndex];
+      } else {
+        LOG_ERROR("Invalid Scene Index. Returning index 0");
+        m_selectedSceneIndex = 0;
+      }
+
+      eventRegistry.notify("session.scene_selected", m_selectedSceneIndex);
+      return scenes[m_selectedSceneIndex];
+    };
     shared_ptr<MidiClip> Session::addClip(){
 
         auto currentTrack = selectedTrack();
@@ -104,6 +143,7 @@ namespace tstudio {
         clips.emplace_back(clip);
         m_selectedClipIndex = clips.size() -1;
         clip->addOutputNode(currentTrack);
+        eventRegistry.notify("session.clip_create", m_selectedClipIndex);
         return clip;
     };
 
@@ -125,7 +165,7 @@ namespace tstudio {
     }
     void Session::precountState()
     {
-        auto clip = selectClipByPosition();
+        auto clip = selectedClip();
         auto track = selectedTrack();
         
         if (clip == nullptr)
@@ -138,6 +178,47 @@ namespace tstudio {
         {
             clip->setNextClipState(ClipState::LAUNCHING_RECORDING);
         }
+    }
+    void Session::deleteClip(){
+        auto clip = selectedClip();
+        if(clip != nullptr){
+            try
+            {
+                auto it = std::find(clips.begin(), clips.end(), clip);
+                clips.erase(it);
+            }
+            catch (const std::exception&)
+            {
+                LOG_ERROR("No Clips selected");
+            }
+        }
+    }
+    void Session::deleteClipAtPosition(std::pair<int, int> clipPosition){
+        auto clip = selectClipByPosition(clipPosition);
+        if(clip != nullptr){
+            try
+            {
+                auto it = std::find(clips.begin(), clips.end(), clip);
+                clips.erase(it);
+            }
+            catch (const std::exception&)
+            {
+                LOG_ERROR("No Clips selected");
+            }
+        }
+    }
+    void Session::deleteClipAtIndex(int index){
+        try
+        {
+          auto clip = clips.at(index);
+          auto it = std::find(clips.begin(), clips.end(), clip);
+          clips.erase(it);
+        }
+        catch (const std::exception&)
+        {
+            LOG_ERROR("Index: of clips vector is out of range");
+        }
+        
     }
     void Session::playingState()
     {
@@ -158,7 +239,7 @@ namespace tstudio {
     }
     void Session::recordingState()
     {
-        auto clip = selectClipByPosition();
+        auto clip = selectedClip();
         auto track = selectedTrack();
         if (clip == nullptr)
         {
@@ -184,31 +265,9 @@ namespace tstudio {
         for (auto t: tracks){
             (t->id == track->id) ? t->arm.set(true) : t->arm.set(false);
         }
-        // TODO: Implement Track Selection Change event
         return track;
     };
-    Scene& Session::selectScene(int index) {
-        bool isValidIndex = true;
     
-        try
-        {
-            auto scene = scenes.at(index);
-        }
-        catch (const std::exception&)
-        {
-            isValidIndex = false;
-        }
-
-        if(isValidIndex){
-            m_selectedSceneIndex = index;
-            return scenes[m_selectedSceneIndex];
-        }else{
-            LOG_ERROR("Invalid Scene Index. Returning index 0");
-            m_selectedSceneIndex = 0;
-            // TODO: Implement Scene Selection Change event
-            return scenes[-m_selectedTrackIndex];
-        }
-    };
 
     shared_ptr<TrackNode> Session::selectedTrack(){
         return tracks[m_selectedTrackIndex];
@@ -225,15 +284,22 @@ namespace tstudio {
     };
 
     shared_ptr<MidiClip> Session::selectedClip(){
-        return clips[m_selectedClipIndex];
-    };
-    shared_ptr<MidiClip> Session::selectClipByPosition(){
-        for (auto c: clips){
-            auto clipPosition = c->getPosition();
-            if(clipPosition.first == m_selectedTrackIndex && clipPosition.second == m_selectedSceneIndex){
-                return c;
-            }
+      for (auto c : clips) {
+        auto clipPosition = c->getPosition();
+        if (clipPosition.first == m_selectedTrackIndex &&
+            clipPosition.second == m_selectedSceneIndex) {
+          return c;
         }
-        return nullptr;
+      }
+      return nullptr;
+    };
+    shared_ptr<MidiClip> Session::selectClipByPosition(std::pair<int, int> clipPosition) {
+      for (auto c : clips) {
+        if (clipPosition.first == m_selectedTrackIndex &&
+            clipPosition.second == m_selectedSceneIndex) {
+          return c;
+        }
+      }
+      return nullptr;
     };
 }
