@@ -1,4 +1,5 @@
 #include "LabSound/LabSound.h"
+#include "LabSound/extended/Logging.h"
 #include "core/SamplerNode.h"
 #include "core/Session.h"
 #include <any>
@@ -44,15 +45,52 @@ namespace tstudio {
         context->synchronizeConnections();
 
         // Get trackIndex and set
-        m_selectedTrackIndex = tracks.size() -1;
+        // TODO: Implement Track creation event
+        selectTrack(tracks.size() - 1);
+        
         return newTrack;
     }
-
+    void Session::nextTrack(){
+        auto index = selectedTrackIndex();
+        auto trackLength = tracks.size();
+        auto newIndex = (index + 1 == trackLength) ? 0 : index + 1;
+        m_selectedTrackIndex = newIndex;
+        auto track = selectTrack(newIndex);
+        std::cout << newIndex << " : " << track->name.value << std::endl;
+    };
+    void Session::prevTrack(){
+        auto index = selectedTrackIndex();
+        auto trackLength = tracks.size();
+        auto newIndex = (index - 1 < 0) ? trackLength-1 : index - 1;
+        m_selectedTrackIndex = newIndex;
+        auto track = selectTrack(newIndex);
+        std::cout << newIndex << " : " << track->name.value << std::endl;
+    };
+    void Session::nextScene(){
+      auto index = selectedSceneIndex();
+      auto sceneLength = scenes.size();
+      auto newIndex = (index + 1 == sceneLength) ? 0 : index + 1;
+      m_selectedSceneIndex = newIndex;
+      auto scene = selectScene(m_selectedSceneIndex);
+      std::cout << m_selectedSceneIndex << " : " << scene.name.value << std::endl;
+    };
+    void Session::prevScene(){
+      auto index = selectedSceneIndex();
+      auto sceneLength = scenes.size();
+      auto newIndex = (index - 1 < 0) ? sceneLength - 1 : index - 1;
+      m_selectedSceneIndex = newIndex;
+      auto scene = selectScene(m_selectedSceneIndex);
+      std::cout << m_selectedSceneIndex << " : " << scene.name.value << std::endl;
+    };
     Scene& Session::addScene()
     {
-        auto newSceneIndex = std::to_string(tracks.size() + 1);
-        scenes.emplace_back(Scene());
+        auto newSceneIndex = std::to_string(scenes.size() + 1);
+        auto newScene = Scene();
+        newScene.name.set("Scene " + newSceneIndex);
+        scenes.emplace_back(newScene);
+
         m_selectedSceneIndex = scenes.size() - 1;
+        // TODO: Implement Scene Creation event
         return scenes[m_selectedSceneIndex];
     }
 
@@ -68,9 +106,9 @@ namespace tstudio {
         clip->addOutputNode(currentTrack);
         return clip;
     };
+
     void Session::onPlayheadStateChange(std::any data)
     {
-        
         auto state = std::any_cast<PlayheadState>(data);
         if (state == PlayheadState::PRECOUNT){
             
@@ -133,6 +171,45 @@ namespace tstudio {
             clip->setNextClipState(ClipState::RECORDING);
         }
     }
+    shared_ptr<TrackNode> Session::selectTrack(int index){
+        auto track = tracks[index];
+
+        if(track == nullptr){
+            m_selectedTrackIndex = 0;
+            track = tracks[m_selectedTrackIndex];
+        }else{
+            m_selectedTrackIndex = index;
+        }
+
+        for (auto t: tracks){
+            (t->id == track->id) ? t->arm.set(true) : t->arm.set(false);
+        }
+        // TODO: Implement Track Selection Change event
+        return track;
+    };
+    Scene& Session::selectScene(int index) {
+        bool isValidIndex = true;
+    
+        try
+        {
+            auto scene = scenes.at(index);
+        }
+        catch (const std::exception&)
+        {
+            isValidIndex = false;
+        }
+
+        if(isValidIndex){
+            m_selectedSceneIndex = index;
+            return scenes[m_selectedSceneIndex];
+        }else{
+            LOG_ERROR("Invalid Scene Index. Returning index 0");
+            m_selectedSceneIndex = 0;
+            // TODO: Implement Scene Selection Change event
+            return scenes[-m_selectedTrackIndex];
+        }
+    };
+
     shared_ptr<TrackNode> Session::selectedTrack(){
         return tracks[m_selectedTrackIndex];
     };

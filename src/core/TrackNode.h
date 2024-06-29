@@ -35,11 +35,10 @@ namespace tstudio {
     class TrackNode : public MidiNode {
     public:
         uuids::uuid id;
-        
         FloatParam volume = FloatParam("volume", "Voluem", 1.f, "Slider");
         BoolParam mute = BoolParam("mute", "Mute", false, "Toggle");
         BoolParam solo = BoolParam("solo", "Solo", false, "Toggle");
-        BoolParam arm = BoolParam("arm", "arm", true, "Toggle");
+        BoolParam arm = BoolParam("arm", "arm", false, "Toggle");
         FloatParam pan = FloatParam("pan", "Pan", .5f, "Slider");
         shared_ptr<GainNode> volumeNode;
         shared_ptr<InstrumentDevice> instrument;

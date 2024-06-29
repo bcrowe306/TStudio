@@ -55,12 +55,41 @@ namespace tstudio {
         shared_ptr<TrackNode> selectedTrack();
         shared_ptr<TrackNode> selectTrack(int);
         Scene& selectScene(int); // TODO: Implement
+
+        // Get the index of the currently selected track
         int selectedTrackIndex() const {return m_selectedTrackIndex;};
+
+        // Get the index of the currently selected scene
         int selectedSceneIndex() const { return m_selectedSceneIndex; };
+
+        // Create a new scene
         Scene& addScene();
+
+        // Navigate to next track in the vector, selecting it. Will loop to
+        // beginning if end is reached
+        void nextTrack();
+
+        // Navigate to previous track in vector, selecting it. Will loop to
+        // beginning if end is reached
+        void prevTrack();
+
+        // Navigate to next scene in vector. Will loop to beginning if end is reached
+        void nextScene();
+
+        // Navigate to previous scene in vector. Will loop to beginning if end
+        // is reached
+        void prevScene();
+
+        // Delete scene
         void deleteScene(); // TODO: Implement
+
+        // Create a clip in the current position
         shared_ptr<MidiClip> addClip();
+
+        // Delete clip in the current position
         shared_ptr<MidiClip> deleteClip(); // TODO: Implement
+
+        // Select clip by the clip index. This index is the index of the clips vector
         shared_ptr<MidiClip> selectClipByIndex(int);
 
         // Gets the clip at the current track and scene index.

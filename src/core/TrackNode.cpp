@@ -1,6 +1,7 @@
 #include "core/TrackNode.h"
 #include "core/MidiMsg.h"
 #include "core/MidiNode.h"
+#include "library/UUID_Gen.h"
 
 using namespace lab;
 using namespace placeholders;
@@ -9,7 +10,7 @@ using std::shared_ptr;
 using std::string;
 
 namespace tstudio {
-  TrackNode::TrackNode(shared_ptr<AudioContext> context) : context(context), midiEventRegistry(MidiEventRegistry::getInstance()) {
+  TrackNode::TrackNode(shared_ptr<AudioContext> context) : context(context), midiEventRegistry(MidiEventRegistry::getInstance()), id(GenerateUUID()) {
 
             // Setup midi stuff
             midiMsgFilter = MidiMsgFilter{"all", 0};
@@ -33,7 +34,6 @@ namespace tstudio {
     this->context->connect(output, this->instrument->output);
   }
   void TrackNode::onMidiMsg(MidiMsg &msg) {
-    
     this->pushIn(msg);
     if (arm.get()) {
       this->push(msg);

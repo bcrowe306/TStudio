@@ -6,6 +6,7 @@
 #include "core/MidiEngine.h"
 #include "core/MidiEventRegistry.h"
 #include "core/MidiMsg.h"
+#include "core/MidiMsgFilter.h"
 #include "core/Playhead.h"
 #include "library/ScrollView.h"
 #include "core/Session.h"
@@ -44,6 +45,10 @@ int main(int, char **) {
   // Daw Setup Code
   MidiEventRegistry &mer = MidiEventRegistry::getInstance();
   auto midiEngine = MidiEngine(true);
+
+  for(auto [name, device] : midiEngine.inputDevices){
+    std::cout << name << std::endl;
+  }
   midiEngine.activate();
   AudioEngine ae;
   auto context = ae.activate();
@@ -53,6 +58,39 @@ int main(int, char **) {
   auto session = make_shared<Session>(context, playHead);
   context->connect(context->destinationNode(), session->output);
   context->synchronizeConnections();
+  auto filter = MidiMsgFilter{"MPK mini 3", 0};
+  mer.subscribe(filter, [&](MidiMsg &event){
+    char knob1 = 70;
+    char knob2 = 71;
+    char knob3 = 72;
+    char knob4 = 73;
+    char knob5 = 74;
+    char knob6 = 75;
+    char knob7 = 76;
+    char knob8 = 77;
+
+    if(event.getNoteNumber().note == knob1 && event.getVelocity() == 1){
+      session->nextTrack();
+    }
+    if(event.getNoteNumber().note == knob1 && event.getVelocity() == 127){
+      session->prevTrack();
+    }
+    if(event.getNoteNumber().note == knob2 && event.getVelocity() == 1){
+      session->nextScene();
+    }
+    if(event.getNoteNumber().note == knob2 && event.getVelocity() == 127){
+      session->prevScene();
+    }
+
+    if(event.getNoteNumber().note == knob3 && event.getVelocity() == 1){
+      playHead->setTempo(playHead->getTempo() + 1.0f);
+      std::cout << playHead->getTempo() << std::endl;
+    }
+    if(event.getNoteNumber().note == knob3 && event.getVelocity() == 127){
+      playHead->setTempo(playHead->getTempo() - 1.0f);
+      std::cout << playHead->getTempo() << std::endl;
+    }
+  });
 
 
   termios original;
@@ -145,6 +183,15 @@ int main(int, char **) {
     if (c == '-') {
       playHead->setTempo(playHead->getTempo() - 1.0f);
       std::cout << playHead->getTempo();
+    }
+    if (c == 't') {
+      session->addTrack();
+    }
+    if (c == 'x') {
+      session->nextTrack();
+    }
+    if (c == 'z') {
+      session->prevTrack();
     }
 
     if (c == 'q')
