@@ -44,24 +44,39 @@ void MidiClip::onLaunchEvent(any data){
 
 void MidiClip::setNextClipState(ClipState next_state)
 {
-  auto next_state_modified = processClipState(next_state);
-  if (playhead->launchQuantization == LaunchQuantization::Off)
+  switch (next_state)
   {
-    setState(next_state_modified);
-    this->nextState = next_state_modified;
+  case ClipState::STOPPED:
+    if(playhead->launchQuantization == LaunchQuantization::Off){
+      setState(next_state);
+    }else{
+      setState(ClipState::STOPPING);
+      nextState = next_state;
     }
-    else
-    {
-      if (next_state == ClipState::RECORDING && getState() == ClipState::PLAYING)
-      {
-        nextState = next_state_modified;
-        setState(next_state_modified);
-      }
-      else
-      {
-        nextState = next_state_modified;
+    break;
+  case ClipState::RECORDING:
+    if(length == 0){
+      setState(ClipState::LAUNCHING_RECORDING);
+      nextState = ClipState::RECORDING_INITIAL;
+    }else{
+      if(getState() == ClipState::PLAYING){
+        setState(ClipState::RECORDING);
+      }else{
+        setState(ClipState::LAUNCHING_RECORDING);
+        nextState = ClipState::RECORDING;
       }
     }
+    break;
+  case ClipState::PLAYING:
+    if(playhead->launchQuantization == LaunchQuantization::Off){
+      setState(ClipState::PLAYING);
+    }else{
+      setState(ClipState::LAUNCHING_PLAY);
+      nextState = ClipState::PLAYING;
+    }
+  default:
+    break;
+  }
 }
 
 ClipState MidiClip::processClipState(ClipState nextClipState)
@@ -249,7 +264,6 @@ void MidiClip::quantizeClipLength(ClipState state) {
 void MidiClip::setState(ClipState newState) {
   
   // If we're trying to set to RECORDING state and length is zero, we set to initial recording
-  LOG_TRACE(std::to_string(length).c_str());
   if(length == 0 && newState == ClipState::RECORDING){
       newState = ClipState::RECORDING_INITIAL;
   }

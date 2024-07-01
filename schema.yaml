@@ -1,18 +1,45 @@
-SessionManager:
-  states:
-    - PLAYING
-    - RECORDING
-    - STOPPING
-  events:
-    ACTIVATE_CELL
-    STOP_ALL_CLIPS
-    STOP_CLIP
 
-O- O- O- O- O-  y = scenes
-O- O- O- O- O- 
-O- O- O- O- O- 
-O- O- O- O- O- 
 
-x = tracks
+ClipState:
+  - STOPPED
+  - LAUNCHING_PLAY
+  - LAUNCHING_RECORDING
+  - RECORDING_INITIAL
+  - RECORDING
+  - PLAYING
+  - STOPPING
+  - DISABLED
 
-nd dim1= x, dim2=y
+
+NextClipState:
+  - STOPPED:
+      immediate_state: STOPPING
+      next_state: STOPPED
+      immediate_transition_if:
+        condition:
+          launchQuant == Off
+  - RECORDING:
+      immediate_state: LAUNCHING_RECORDING
+      next_state: 
+        condition:
+          length == 0: RECORDING_INITIAL
+          else: RECORDING
+      immediate_transition_if:
+        condition:
+          length > 0 && current_state == PLAYING
+      logic_order:
+        length == 0:
+          immediate_state: LAUNCHING_RECORDING
+          next_state: RECORDING_INITIAL
+        else:
+          current_state == PLAYING:
+            immediate_state: RECORDING
+          else:
+            immediate_state: LAUNCHING_RECORDING
+            next_state: RECORDING
+  - PLAYING:
+      immediate_state: LAUNCHING_PLAY
+      next_state: PLAYING
+      immediate_transition_if:
+        condition:
+          launchQuant == Off

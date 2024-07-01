@@ -16,6 +16,8 @@
     "vcpkg.target.preferSystemLibs": false,
     "vcpkg.target.useManifest": true,
     "files.associations": {
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "__mutex_base": "cpp",
+        "vector": "cpp"
     }
 }

@@ -85,8 +85,13 @@ namespace tstudio {
         // Delete scene
         void deleteScene(); 
 
+        vector<shared_ptr<MidiClip>> getClipsInTrack(int);
+        vector<shared_ptr<MidiClip>> getClipsInScene(int);
         // Create a clip in the current position
         shared_ptr<MidiClip> addClip();
+
+        // Create a new clip in the selected location with the length(int bars) provided as an argument
+        shared_ptr<MidiClip> newClip(int);
 
         // Delete clip in the current position
         void deleteClip();
@@ -106,6 +111,9 @@ namespace tstudio {
         // Gets the clip at the current track and scene index.
         // If no clip is present, returns nullptr.
         shared_ptr<MidiClip> selectedClip();
+
+        // Activates the clip at sceneIndex. This stops all other clips in the track.
+        void activateClip(shared_ptr<MidiClip>, ClipState);
     private:
 
         // Members
@@ -118,6 +126,7 @@ namespace tstudio {
         void recordingState();
         void playingState();
         void onPlayheadStateChange(any state);
+
     };
 
 }

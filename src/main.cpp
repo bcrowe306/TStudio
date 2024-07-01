@@ -13,6 +13,7 @@
 #include "libusb.h"
 #include <__functional/bind_front.h>
 #include <cstdlib>
+#include <array>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -23,6 +24,9 @@
 #include <vector>
 #define CYAN "\x1B[36m"
 #define WHITE "\x1B[37m"
+#define OUT std::cout 
+#define END std::endl
+
 
 using namespace tstudio;
 using namespace placeholders;
@@ -58,8 +62,28 @@ int main(int, char **) {
   auto session = make_shared<Session>(context, playHead);
   context->connect(context->destinationNode(), session->output);
   context->synchronizeConnections();
+
+  termios original;
+  // Get the current terminal settings
+  tcgetattr(STDIN_FILENO, &original);
+
+  // Set the terminal to raw mode
+  set_raw_mode(original);
+
+  namespace fs = std::filesystem;
+  auto HOME = (std::string)getenv("HOME");
+  fs::path fileDir = HOME + "/Documents";
+  std::vector<filesystem::directory_entry> dir;
+  ScrollView sv(dir);
+
+  for (auto &entry : fs::directory_iterator(fileDir)) {
+    dir.emplace_back(entry);
+  }
+  sv.render_view();
+
   auto filter = MidiMsgFilter{"MPK mini 3", 0};
-  mer.subscribe(filter, [&](MidiMsg &event){
+  mer.subscribe(filter, [&](MidiMsg &event)
+                {
     char knob1 = 70;
     char knob2 = 71;
     char knob3 = 72;
@@ -89,30 +113,11 @@ int main(int, char **) {
     if(event.getNoteNumber().note == knob3 && event.getVelocity() == 127){
       playHead->setTempo(playHead->getTempo() - 1.0f);
       std::cout << playHead->getTempo() << std::endl;
-    }
-  });
-
-
-  termios original;
-  // Get the current terminal settings
-  tcgetattr(STDIN_FILENO, &original);
-
-  // Set the terminal to raw mode
-  set_raw_mode(original);
-
-  namespace fs = std::filesystem;
-  auto HOME = (std::string)getenv("HOME");
-  fs::path fileDir = HOME + "/Documents";
-  std::vector<filesystem::directory_entry> dir;
-  ScrollView sv(dir);
-
-  for (auto &entry : fs::directory_iterator(fileDir)) {
-    dir.emplace_back(entry);
-  }
-  sv.render_view();
+    } });
   char c;
+  std::array<char, 2> C;
   while (true) {
-    // clear_screen(original);
+    clear_screen(original);
     // Print the ASCII value of the key pressed
     std::cout << "You pressed: " << c << " (ASCII: " << static_cast<int>(c)
               << ")\n";
@@ -127,14 +132,65 @@ int main(int, char **) {
     //   }
     // }
     // Read a single character
+    int sceneIndex = 0;
+    for (auto scene: session->scenes){
+      int trackIndex = 0;
+      OUT << " | ";
+      for (auto track : session->tracks){
+        if (session->selectedTrackIndex() == trackIndex && session->selectedSceneIndex() == sceneIndex)
+          OUT << CYAN;
+        else
+          OUT << WHITE;
+          auto clip = session->selectClipByPosition(std::pair<int, int>{trackIndex, sceneIndex});
+          if (clip != nullptr)
+          {
+            OUT << clip->name.value << " | ";
+          }
+          else
+          {
+            OUT << "-----------" << " | ";
+          }
+          OUT << WHITE;
+          trackIndex++;
+        }
+      OUT << scene.name.value << " |" << END;
+      sceneIndex++;
+    }
+
+    // Line Separator
+    OUT << " * ";
+    for (auto track : session->tracks)
+    {
+      OUT << "-----------" << " * ";
+    }
+    OUT << END;
+    
+    // Track Row
+    OUT << " | ";
+    int trackIndex = 0;
+    for (auto track : session->tracks)
+    {
+        if(session->selectedTrackIndex() == trackIndex){
+          OUT << CYAN << track->name.value <<  WHITE <<" | " ;
+        }else{
+
+          OUT << track->name.value <<  " | " ;
+        }
+        trackIndex++;
+    }
+    OUT << END;
+
     if (read(STDIN_FILENO, &c, 1) == -1) {
       perror("read");
       break;
     }
-
+  
     // Break the loop if 'q' is pressed
     if (c == '.') {
       sv.increment();
+    }
+    if (c == 'c') {
+      session->newClip(2);
     }
     if (c == ',') {
       sv.decrement();
@@ -192,6 +248,12 @@ int main(int, char **) {
     }
     if (c == 'z') {
       session->prevTrack();
+    }
+    if (c == 'w') {
+      session->prevScene();
+    }
+    if (c == 's') {
+      session->nextScene();
     }
 
     if (c == 'q')

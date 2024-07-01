@@ -54,20 +54,14 @@ namespace tstudio {
         return newTrack;
     }
     void Session::nextTrack(){
-        auto index = selectedTrackIndex();
-        auto trackLength = tracks.size();
-        auto newIndex = (index + 1 == trackLength) ? 0 : index + 1;
-        m_selectedTrackIndex = newIndex;
-        auto track = selectTrack(newIndex);
-        std::cout << newIndex << " : " << track->name.value << std::endl;
+        m_selectedTrackIndex = (m_selectedTrackIndex + 1 == tracks.size()) ? 0 : m_selectedTrackIndex + 1;
+        auto track = selectTrack(m_selectedTrackIndex);
+        std::cout << m_selectedTrackIndex << " : " << track->name.value << std::endl;
     };
     void Session::prevTrack(){
-        auto index = selectedTrackIndex();
-        auto trackLength = tracks.size();
-        auto newIndex = (index - 1 < 0) ? trackLength-1 : index - 1;
-        m_selectedTrackIndex = newIndex;
-        auto track = selectTrack(newIndex);
-        std::cout << newIndex << " : " << track->name.value << std::endl;
+        m_selectedTrackIndex = (m_selectedTrackIndex - 1 < 0) ? tracks.size() - 1 : m_selectedTrackIndex - 1;
+        auto track = selectTrack(m_selectedTrackIndex);
+        std::cout << m_selectedTrackIndex << " : " << track->name.value << std::endl;
     };
 
     Scene Session::selectedScene(){
@@ -75,18 +69,13 @@ namespace tstudio {
     };
 
     void Session::nextScene(){
-      auto index = selectedSceneIndex();
       auto sceneLength = scenes.size();
-      auto newIndex = (index + 1 == sceneLength) ? 0 : index + 1;
-      m_selectedSceneIndex = newIndex;
+      m_selectedSceneIndex = (m_selectedSceneIndex + 1 == sceneLength) ? 0 : m_selectedSceneIndex + 1;
       auto scene = selectScene(m_selectedSceneIndex);
       std::cout << m_selectedSceneIndex << " : " << scene.name.value << std::endl;
     };
     void Session::prevScene(){
-      auto index = selectedSceneIndex();
-      auto sceneLength = scenes.size();
-      auto newIndex = (index - 1 < 0) ? sceneLength - 1 : index - 1;
-      m_selectedSceneIndex = newIndex;
+      m_selectedSceneIndex = (m_selectedSceneIndex - 1 < 0) ? scenes.size() - 1 : m_selectedSceneIndex - 1;
       auto scene = selectScene(m_selectedSceneIndex);
       std::cout << m_selectedSceneIndex << " : " << scene.name.value << std::endl;
     };
@@ -136,15 +125,35 @@ namespace tstudio {
     shared_ptr<MidiClip> Session::addClip(){
 
         auto currentTrack = selectedTrack();
-        auto clipNumber = std::to_string(clips.size()+ 1);
-        auto trackIndex = selectedTrackIndex();
-        auto sceneIndex = selectedSceneIndex();
-        auto clip = make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, trackIndex, sceneIndex);
-        clips.emplace_back(clip);
-        m_selectedClipIndex = clips.size() -1;
-        clip->addOutputNode(currentTrack);
-        eventRegistry.notify("session.clip_create", m_selectedClipIndex);
-        return clip;
+        auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
+
+        if(selectedClip() == nullptr){
+            auto clip = make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
+            clips.emplace_back(clip);
+            m_selectedClipIndex = clips.size() - 1;
+            clip->addOutputNode(currentTrack);
+            eventRegistry.notify("session.clip_create", m_selectedClipIndex);
+            return clip;
+        }
+        return nullptr;
+
+        
+    };
+    shared_ptr<MidiClip> Session::newClip(int length){
+
+        auto currentTrack = selectedTrack();
+        auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
+        if (selectedClip() == nullptr)
+        {
+            auto clip = make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
+            clips.emplace_back(clip);
+            m_selectedClipIndex = clips.size() - 1;
+            clip->addOutputNode(currentTrack);
+            eventRegistry.notify("session.clip_create", m_selectedClipIndex);
+            return clip;
+        }
+        return nullptr;
+
     };
 
     void Session::onPlayheadStateChange(std::any data)
@@ -163,22 +172,7 @@ namespace tstudio {
             playingState();
         }
     }
-    void Session::precountState()
-    {
-        auto clip = selectedClip();
-        auto track = selectedTrack();
-        
-        if (clip == nullptr)
-        {
-            auto newClip = addClip();
-            
-            newClip->setState(ClipState::LAUNCHING_RECORDING);
-        }
-        else
-        {
-            clip->setNextClipState(ClipState::LAUNCHING_RECORDING);
-        }
-    }
+    
     void Session::deleteClip(){
         auto clip = selectedClip();
         if(clip != nullptr){
@@ -228,30 +222,33 @@ namespace tstudio {
 
             // If the clips are in a recording state
             if(state == ClipState::RECORDING || state == ClipState::RECORDING_INITIAL){
-                if(playhead->launchQuantization != LaunchQuantization::Off){
-                    clip->setNextClipState(ClipState::PLAYING);
-                }
-                else {
-                    clip->setState(ClipState::PLAYING);
-                }
+                activateClip(clip, ClipState::PLAYING);
             }
         }
     }
     void Session::recordingState()
     {
-        auto clip = selectedClip();
-        auto track = selectedTrack();
-        if (clip == nullptr)
+        if (selectedTrack()->arm.get())
         {
-            clip = addClip();
-            clip->setState(ClipState::LAUNCHING_RECORDING);
-            clip->setNextClipState(ClipState::RECORDING_INITIAL);
-        }
-        else
-        {
-            clip->setNextClipState(ClipState::RECORDING);
+            auto clip = selectedClip();
+            if (clip == nullptr)
+                clip = addClip();
+            activateClip(clip, ClipState::RECORDING);
         }
     }
+
+    void Session::precountState()
+    {
+        // Create a new clip and start recording if track is armed:
+        if(selectedTrack()->arm.get()){
+            auto clip = selectedClip();
+            if (clip == nullptr)
+                clip = addClip();
+            
+            activateClip(clip, ClipState::RECORDING);
+        }
+    }
+
     shared_ptr<TrackNode> Session::selectTrack(int index){
         auto track = tracks[index];
 
@@ -295,11 +292,47 @@ namespace tstudio {
     };
     shared_ptr<MidiClip> Session::selectClipByPosition(std::pair<int, int> clipPosition) {
       for (auto c : clips) {
-        if (clipPosition.first == m_selectedTrackIndex &&
-            clipPosition.second == m_selectedSceneIndex) {
+        if (c->getPosition() == clipPosition) {
           return c;
         }
       }
       return nullptr;
     };
+
+    vector<shared_ptr<MidiClip>> Session::getClipsInTrack(int trackIndex){
+        vector<shared_ptr<MidiClip>> clipsInTrack;
+        auto it = std::copy_if(clips.begin(), clips.end(),
+        std::back_inserter(clipsInTrack),
+        [trackIndex](shared_ptr<MidiClip>  clip){
+            return clip->getPosition().first == trackIndex;
+        }
+        );
+        return clipsInTrack;
+    }
+
+    vector<shared_ptr<MidiClip>> Session::getClipsInScene(int sceneIndex){
+        vector<shared_ptr<MidiClip>> clipsInScene;
+        auto it = std::copy_if(clips.begin(), clips.end(),
+        std::back_inserter(clipsInScene),
+        [sceneIndex](shared_ptr<MidiClip> clip){
+            return clip->getPosition().second == sceneIndex;
+        }
+        );
+        return clipsInScene;
+    }
+    void Session::activateClip(shared_ptr<MidiClip> activeClip, ClipState state)
+    {
+        auto activePosition = activeClip->getPosition();
+        for(auto clip: clips){
+            auto cPos = clip->getPosition();
+            // Only get clips is the track specified by activePosition
+            if(cPos.first == activePosition.first){
+                if(cPos.second != activePosition.second){
+                    clip->setNextClipState(ClipState::STOPPED);
+                }else{
+                    clip->setNextClipState(state);
+                }
+            }
+        }
+    }
 }

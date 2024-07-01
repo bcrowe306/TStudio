@@ -1,6 +1,14 @@
 {
     "configurations": [
         {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug in terminal",
+            "program": "${workspaceFolder}/build/TStudio",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
             "type": "cmake",
             "request": "launch",
             "name": "Debug portfile(s)",
