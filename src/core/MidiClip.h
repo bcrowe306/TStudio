@@ -108,6 +108,7 @@ namespace tstudio {
     void setLength(int );
     void setState(ClipState );
     void setNextClipState(ClipState);
+    void deInit();
     ClipState getNextClipState() const;
 
     pair<int,int> getPosition();
@@ -126,6 +127,9 @@ namespace tstudio {
     int trackIndex = 0;
     int sceneIndex = 0;
     HandlerId handlerId;
+    HandlerId playheadStateHandlerId;
+    HandlerId playheadLaunchHandlerId;
+
 
     function<void(MidiMsg &)> onMidiClipOut;
     unordered_map<ClipState, function<void()>> clip_state_map = {
@@ -144,6 +148,7 @@ namespace tstudio {
     // Methods
     void quantizeClipLength(ClipState );
     void init();
+    
     void onLaunchEvent(any);
     ClipState processClipState(ClipState);
     void onPlayheadStateChange(any);

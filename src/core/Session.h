@@ -11,6 +11,8 @@
 #include "library/EventRegistry.h"
 #include <utility>
 #include <vector>
+#include <variant>
+#include <optional>
 #include <string>
 #include <memory>
 #include <any>
@@ -22,10 +24,16 @@ using std::shared_ptr;
 using std::unique_ptr;
 using std::make_shared;
 using std::any;
+using std::variant;
+using std::optional;
+
 
 // TODO: Implement Undo/Redo - Command Pattern
 
 namespace tstudio {
+
+using MidiClipType = shared_ptr<MidiClip>;
+
     struct Scene {
         Scene() :id(GenerateUUID()) {}
         uuid id;
@@ -47,7 +55,7 @@ namespace tstudio {
         shared_ptr<Playhead> playhead;
         vector<shared_ptr<TrackNode>> tracks;
         vector<Scene> scenes;
-        vector<unique_ptr<MidiClip>> clips;
+        vector<MidiClipType> clips;
         shared_ptr<AnalyserNode> output;
 
         // Methods
@@ -86,13 +94,14 @@ namespace tstudio {
         // Delete scene
         void deleteScene(); 
 
-        vector<shared_ptr<MidiClip>> getClipsInTrack(int);
-        vector<shared_ptr<MidiClip>> getClipsInScene(int);
+        vector<reference_wrapper<const MidiClipType>> getClipsInTrack(int);
+        vector<reference_wrapper<const MidiClipType>> getClipsInScene(int);
+
         // Create a clip in the current position
-        unique_ptr<MidiClip> addClip();
+        MidiClipType& addClip();
 
         // Create a new clip in the selected location with the length(int bars) provided as an argument
-        unique_ptr<MidiClip> newClip(int);
+        MidiClipType& newClip(int);
 
         // Delete clip in the current position
         void deleteClip();
@@ -104,24 +113,24 @@ namespace tstudio {
         void deleteClipAtIndex(int);
 
         // Select clip by the clip index. This index is the index of the clips vector
-        unique_ptr<MidiClip> selectClipByIndex(int);
+        MidiClipType& selectClipByIndex(int);
 
         // Gets the clip at the provided position std::pair<int trackIndex, int sceneIndex>. Return nullptr if no clip is found.
-        unique_ptr<MidiClip> selectClipByPosition(std::pair<int, int> clipPosition);
+        MidiClipType& selectClipByPosition(std::pair<int, int> clipPosition);
 
         // Gets the clip at the current track and scene index.
         // If no clip is present, returns nullptr.
-        unique_ptr<MidiClip> selectedClip();
+        MidiClipType& selectedClip();
 
         // Activates the clip at sceneIndex. This stops all other clips in the track.
-        void activateClip(unique_ptr<MidiClip>, ClipState);
+        void activateClip(MidiClipType&, ClipState);
     private:
 
         // Members
         int m_selectedTrackIndex; 
         int m_selectedSceneIndex; 
         int m_selectedClipIndex; 
-
+        MidiClipType midiClipNull = MidiClipType(nullptr);
         // Methods
         void precountState();
         void recordingState();

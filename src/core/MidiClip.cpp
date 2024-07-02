@@ -22,16 +22,23 @@ MidiClip::MidiClip(shared_ptr<Playhead> playhead, const string &name, int trackI
     this->name.set(name);
     init();
 };
-MidiClip::~MidiClip(){
+
+void MidiClip::deInit(){
+  eventRegistry.unsubscribe("playhead.state", playheadStateHandlerId);
+  eventRegistry.unsubscribe("playhead.launch", playheadLaunchHandlerId);
   playhead->unsubscribeTickHandler(handlerId);
 }
 
-    void MidiClip::init() {
+MidiClip::~MidiClip(){
+  deInit();
+}
+
+void MidiClip::init() {
   setLength();
 
   handlerId = playhead->subscribeTickHandler(std::bind(&MidiClip::incTickCounter, this, _1));
-  eventRegistry.subscribe("playhead.state", bind(&MidiClip::onPlayheadStateChange, this, _1));
-  eventRegistry.subscribe("playhead.launch", bind(&MidiClip::onLaunchEvent, this, _1));
+  playheadStateHandlerId = eventRegistry.subscribe("playhead.state", bind(&MidiClip::onPlayheadStateChange, this, _1));
+  playheadLaunchHandlerId = eventRegistry.subscribe("playhead.launch", bind(&MidiClip::onLaunchEvent, this, _1));
 }
 
 void MidiClip::onLaunchEvent(any data){

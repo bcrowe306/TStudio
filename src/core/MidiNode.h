@@ -27,12 +27,20 @@ namespace tstudio
             : id(GenerateUUID())
         {
             this->name.set(name);
-            MidiNodeRegistry::getInstance().registerNode(shared_from_this());
+            // MidiNodeRegistry::getInstance().registerNode(shared_from_this());
         }
 
         virtual ~MidiNode()
         {
-            MidiNodeRegistry::getInstance().deregisterNode(shared_from_this());
+                // try
+                // {
+                //     MidiNodeRegistry::getInstance().deregisterNode(shared_from_this());
+                    
+                // }
+                // catch (const std::exception& e)
+                // {
+                    
+                // }
         }
 
         // Push messages down to output nodes

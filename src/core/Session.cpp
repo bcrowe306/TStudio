@@ -1,38 +1,46 @@
 #include "LabSound/LabSound.h"
 #include "LabSound/extended/Logging.h"
+#include "core/MidiClip.h"
 #include "core/SamplerNode.h"
 #include "core/Session.h"
 #include <algorithm>
 #include <any>
+#include <memory>
+#include <optional>
 #include <utility>
+#include <functional>
 
 using namespace placeholders;
 namespace tstudio {
-    Session::Session(shared_ptr<AudioContext> context, shared_ptr<Playhead> playhead)
-        : context(context), playhead(playhead), id( GenerateUUID() ), EventBase()
-    {
-        // Preallocate Scene and Track vectors
-        scenes.reserve(64);
-        tracks.reserve(64);
-        clips.reserve(4096);
 
-        // Setup Main output for tracks
-        output = make_shared<AnalyserNode>(*context);
-        context->connect(context->destinationNode(), output);
+using MidiClipType = shared_ptr<MidiClip>;
 
-        // Subscribe to playhead state events
-        eventRegistry.subscribe("playhead.state", std::bind(&Session::onPlayheadStateChange, this, _1));
+Session::Session(shared_ptr<AudioContext> context,
+                 shared_ptr<Playhead> playhead)
+    : context(context), playhead(playhead), id(GenerateUUID()), EventBase() {
+  // Preallocate Scene and Track vectors
+  scenes.reserve(64);
+  tracks.reserve(64);
+  clips.reserve(4096);
 
-        // Setup initial track and scene
-        for (size_t i = 0; i < 4; i++)
-        {
-            addScene();
-        }
-        auto newTrack = addTrack();
+  // Setup Main output for tracks
+  output = make_shared<AnalyserNode>(*context);
+  context->connect(context->destinationNode(), output);
 
-        // Demo code to setup InstrumentTrack
-        auto sampler = make_shared<SamplerNode>(context, "assets/BVKER - The Astro Perc 08.wav");
-        newTrack->set_instrument(sampler);
+  // Subscribe to playhead state events
+  eventRegistry.subscribe("playhead.state",
+                          std::bind(&Session::onPlayheadStateChange, this, _1));
+
+  // Setup initial track and scene
+  for (size_t i = 0; i < 4; i++) {
+    addScene();
+  }
+  auto newTrack = addTrack();
+
+  // Demo code to setup InstrumentTrack
+  auto sampler =
+      make_shared<SamplerNode>(context, "assets/BVKER - The Astro Perc 08.wav");
+  newTrack->set_instrument(sampler);
 
     }
 
@@ -122,37 +130,33 @@ namespace tstudio {
       eventRegistry.notify("session.scene_selected", m_selectedSceneIndex);
       return scenes[m_selectedSceneIndex];
     };
-    shared_ptr<MidiClip> Session::addClip(){
+    MidiClipType& Session::addClip(){
 
         auto currentTrack = selectedTrack();
         auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
 
-        if(selectedClip() == nullptr){
-            auto clip = make_unique<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
-            clips.emplace_back(clip);
+        if(selectedClip() == MidiClipType(nullptr)){
+            auto &clip = clips.emplace_back(make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex));
             m_selectedClipIndex = clips.size() - 1;
             clip->addOutputNode(currentTrack);
             eventRegistry.notify("session.clip_create", m_selectedClipIndex);
             return clip;
         }
-        return nullptr;
-
-        
+        return midiClipNull;
     };
-    shared_ptr<MidiClip> Session::newClip(int length){
+    MidiClipType& Session::newClip(int length){
 
         auto currentTrack = selectedTrack();
         auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
-        if (selectedClip() == nullptr)
+        if (selectedClip() == MidiClipType(nullptr))
         {
-            auto clip = make_unique<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
-            clips.emplace_back(clip);
+            auto &clip =clips.emplace_back(make_unique<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex));
             m_selectedClipIndex = clips.size() - 1;
             clip->addOutputNode(currentTrack);
             eventRegistry.notify("session.clip_create", m_selectedClipIndex);
             return clip;
         }
-        return nullptr;
+        return midiClipNull;
 
     };
 
@@ -174,10 +178,12 @@ namespace tstudio {
     }
     
     void Session::deleteClip(){
-        auto clip = selectedClip();
+        auto &clip = selectedClip();
         if(clip != nullptr){
             try
             {
+                auto currentTrack = selectedTrack();
+                clip->removeOutputNode(currentTrack);
                 auto it = std::find(clips.begin(), clips.end(), clip);
                 clips.erase(it);
             }
@@ -188,8 +194,8 @@ namespace tstudio {
         }
     }
     void Session::deleteClipAtPosition(std::pair<int, int> clipPosition){
-        auto clip = selectClipByPosition(clipPosition);
-        if(clip != nullptr){
+        auto &clip = selectClipByPosition(clipPosition);
+        if(clip != midiClipNull){
             try
             {
                 auto it = std::find(clips.begin(), clips.end(), clip);
@@ -204,7 +210,7 @@ namespace tstudio {
     void Session::deleteClipAtIndex(int index){
         try
         {
-          auto clip = clips.at(index);
+          auto &clip = clips.at(index);
           auto it = std::find(clips.begin(), clips.end(), clip);
           clips.erase(it);
         }
@@ -230,10 +236,14 @@ namespace tstudio {
     {
         if (selectedTrack()->arm.get())
         {
-            auto clip = selectedClip();
-            if (clip == nullptr)
-                clip = addClip();
-            activateClip(clip, ClipState::RECORDING);
+            auto &clip = selectedClip();
+            if (clip == midiClipNull){
+                activateClip(addClip(), ClipState::RECORDING);
+
+            }
+            else{
+                activateClip(clip, ClipState::RECORDING);
+            }
         }
     }
 
@@ -241,10 +251,13 @@ namespace tstudio {
     {
         // Create a new clip and start recording if track is armed:
         if(selectedTrack()->arm.get()){
-            auto clip = selectedClip();
-            if (clip == nullptr)
-                clip = addClip();
-            
+            auto &clip = selectedClip();
+            if (clip == midiClipNull)
+            {
+                activateClip(addClip(), ClipState::RECORDING);
+
+            }
+
             activateClip(clip, ClipState::RECORDING);
         }
     }
@@ -270,57 +283,57 @@ namespace tstudio {
         return tracks[m_selectedTrackIndex];
     };
 
-    shared_ptr<MidiClip> Session::selectClipByIndex(int index) {
-        auto clip = clips[index];
+    MidiClipType& Session::selectClipByIndex(int index) {
+        auto &clip = clips[index];
         if(clip != nullptr){
             m_selectedClipIndex = index;
             return selectedClip();
         }else{
-            return nullptr;
+          return midiClipNull;
         }
     };
 
-    unique_ptr<MidiClip> Session::selectedClip(){
-      for (auto c : clips) {
+    MidiClipType& Session::selectedClip(){
+      for (auto &c : clips) {
         auto clipPosition = c->getPosition();
         if (clipPosition.first == m_selectedTrackIndex &&
             clipPosition.second == m_selectedSceneIndex) {
           return c;
         }
       }
-      return nullptr;
+      return midiClipNull;
     };
-    shared_ptr<MidiClip> Session::selectClipByPosition(std::pair<int, int> clipPosition) {
-      for (auto c : clips) {
+    MidiClipType& Session::selectClipByPosition(std::pair<int, int> clipPosition) {
+      for (auto &c : clips) {
         if (c->getPosition() == clipPosition) {
           return c;
         }
       }
-      return nullptr;
+      return midiClipNull;
     };
 
-    vector<shared_ptr<MidiClip>> Session::getClipsInTrack(int trackIndex){
-        vector<shared_ptr<MidiClip>> clipsInTrack;
-        auto it = std::copy_if(clips.begin(), clips.end(),
-        std::back_inserter(clipsInTrack),
-        [trackIndex](shared_ptr<MidiClip>  clip){
-            return clip->getPosition().first == trackIndex;
-        }
-        );
+    vector<reference_wrapper<const MidiClipType>> Session::getClipsInTrack(int trackIndex){
+        vector<reference_wrapper<const MidiClipType>> clipsInTrack;
+        
+        std::for_each(clips.begin(), clips.end(), [&](const MidiClipType &clip){
+            if(clip->getPosition().first == trackIndex){
+              clipsInTrack.push_back(std::cref<const MidiClipType>(clip));
+            }
+        });
         return clipsInTrack;
     }
 
-    vector<shared_ptr<MidiClip>> Session::getClipsInScene(int sceneIndex){
-        vector<shared_ptr<MidiClip>> clipsInScene;
-        auto it = std::copy_if(clips.begin(), clips.end(),
-        std::back_inserter(clipsInScene),
-        [sceneIndex](shared_ptr<MidiClip> clip){
-            return clip->getPosition().second == sceneIndex;
-        }
-        );
+    vector<reference_wrapper<const MidiClipType>> Session::getClipsInScene(int sceneIndex){
+        vector<reference_wrapper<const MidiClipType>> clipsInScene;
+        
+        std::for_each(clips.begin(), clips.end(), [&](const MidiClipType &clip){
+            if(clip->getPosition().second == sceneIndex){
+              clipsInScene.push_back(std::cref<const MidiClipType>(clip));
+            }
+        });
         return clipsInScene;
     }
-    void Session::activateClip(unique_ptr<MidiClip> activeClip, ClipState state)
+    void Session::activateClip(MidiClipType &activeClip, ClipState state)
     {
         auto activePosition = activeClip->getPosition();
         for(auto &clip: clips){

@@ -39,10 +39,11 @@ public:
 
   // Subscribe to an event with a specific event ID
   HandlerId subscribe(const string &event_id, const function<void(any)> &handler) {
-    HandlerId id = nextHandlerId++;
     // unique_lock ul(mtx);
     // cv.wait(ul, [this, event_id](){return this->currentEventId != event_id;});
-    handlers[event_id].emplace_back(id, handler);
+    HandlerId id = nextHandlerId;
+    handlers[event_id].emplace_back(nextHandlerId, handler);
+    nextHandlerId++;
     return id;
   }
 
