@@ -25,8 +25,9 @@ using std::map;
 using std::vector;
 using std::any;
 using std::any_cast;
-
+using HandlerId = std::size_t;
 namespace tstudio {
+  class PlayheadTick;
   const enum class ClipState {
 
     // Is stopped.
@@ -74,7 +75,7 @@ namespace tstudio {
              ClipState state = ClipState::STOPPED);
     MidiClip(shared_ptr<Playhead> playhead, const string &, int trackIndex, int sceneIndex, int length_in_bars=0,
              ClipState state = ClipState::STOPPED);
-
+    ~MidiClip();
     // Members
     
     unordered_map<int, vector<ClipEvent>> data;
@@ -92,7 +93,7 @@ namespace tstudio {
     void clipStoppedState();
     ClipState getState() const;
     void increaseLength();
-    void incTickCounter(/*SongPos song_pos*/);
+    void incTickCounter(PlayheadTick&);
     int getLength() const;
     float getLengthInBars() const;
     void notify(const string &, any);
@@ -124,6 +125,8 @@ namespace tstudio {
     int length = 0;
     int trackIndex = 0;
     int sceneIndex = 0;
+    HandlerId handlerId;
+
     function<void(MidiMsg &)> onMidiClipOut;
     unordered_map<ClipState, function<void()>> clip_state_map = {
         {ClipState::PLAYING, bind(&MidiClip::clipPlayingState, this)},

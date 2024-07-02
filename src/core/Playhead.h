@@ -33,7 +33,16 @@ enum class LaunchQuantization {
   Eighth,
   Sixteenth
 };
-const enum class PlayheadState { PLAYING, STOPPED, RECORDING, PRECOUNT };
+
+struct PlayheadTick{
+  int tickCount=0;
+  int sampleCount=0;
+  bool precount= false;
+  int precountTick= false;
+
+};
+
+enum class PlayheadState { PLAYING, STOPPED, RECORDING, PRECOUNT };
 static unordered_map<PlayheadState, string>PlayheadStateMap = {
   {PlayheadState::PLAYING, "PLAYING"},
   {PlayheadState::STOPPED, "STOPPED"},
@@ -45,12 +54,9 @@ enum class StopMode { RETURN_TO_ZERO, RETURN_TO_PLAY, PAUSE_POSITION };
 
 class Playhead : public FunctionNode, public EventBase {
 public:
-
+  using HandlerId = std::size_t;
   // Members
   int tpqn = 480;
-  int counter = 0;
-  int ticks = 0;
-  int precount_bar_tick = 0;
   int samplesPerTick;
   bool enabled = true;
   int last_play_position_sample = 0;
@@ -96,11 +102,25 @@ public:
   bool isPlaying() const;
   bool isRecording() const;
 
+  // Register a a function to be called when a tick event is generated. The function is called with current cumulative tick.
+  HandlerId subscribeTickHandler(const function<void(PlayheadTick&)> &handler);
+
+  // Remove handler from tick registry by id. The id was returned on
+  // registration "subscribeTickHandler".
+  void unsubscribeTickHandler(HandlerId id);
+
+  // 
+  
+
 private:
   PlayheadState _state = PlayheadState::STOPPED;
   PlayheadState _previous_state;
+  atomic<HandlerId> nextHandlerId{0};
+  vector<pair<HandlerId, function<void(PlayheadTick&)>>> tickHandlers;
+  PlayheadTick playheadTick{};
+  // Notify all handlers of current tick event.
+  void notifyTick();
   int __ticksPerBeat() const;
-
   int __ticksPerBar() const;
   void _setSamplesPerTick() {
     samplesPerTick = (int)(60.f / _tempo / tpqn * audioContext->sampleRate());

@@ -40,10 +40,9 @@ public:
   // Subscribe to an event with a specific event ID
   HandlerId subscribe(const string &event_id, const function<void(any)> &handler) {
     HandlerId id = nextHandlerId++;
-    unique_lock ul(mtx);
-    cv.wait(ul, [this, event_id](){return this->currentEventId != event_id;});
+    // unique_lock ul(mtx);
+    // cv.wait(ul, [this, event_id](){return this->currentEventId != event_id;});
     handlers[event_id].emplace_back(id, handler);
-    cv.notify_all();
     return id;
   }
 
@@ -76,7 +75,7 @@ public:
         }
       }
       currentEventId = "";
-      cv.notify_all();
+      // cv.notify_all();
     }
 
 private:
@@ -87,7 +86,10 @@ private:
   condition_variable cv;
   
   // Private constructor to prevent instantiation
-  EventRegistry() {}
+  EventRegistry() {
+    handlers["playhead.state"].reserve(4096);
+    handlers["playhead.launch"].reserve(4096);
+  }
 
   // Delete copy constructor and assignment operator
   EventRegistry(const EventRegistry &) = delete;
@@ -101,7 +103,4 @@ class EventBase {
 };
 }
 
-
-
 #endif // !EVENTREGISTRY_H
-

@@ -22,18 +22,16 @@ MidiClip::MidiClip(shared_ptr<Playhead> playhead, const string &name, int trackI
     this->name.set(name);
     init();
 };
+MidiClip::~MidiClip(){
+  playhead->unsubscribeTickHandler(handlerId);
+}
 
-void MidiClip::init(){
+    void MidiClip::init() {
   setLength();
 
-  eventRegistry.subscribe("playhead.tick", [this](any data)
-                          { incTickCounter(); });
+  handlerId = playhead->subscribeTickHandler(std::bind(&MidiClip::incTickCounter, this, _1));
   eventRegistry.subscribe("playhead.state", bind(&MidiClip::onPlayheadStateChange, this, _1));
   eventRegistry.subscribe("playhead.launch", bind(&MidiClip::onLaunchEvent, this, _1));
-  eventRegistry.subscribe(
-      "playhead.precount_tick",
-      [this](any data)
-      { onPrecountTick(/*song_pos*/); });
 }
 
 void MidiClip::onLaunchEvent(any data){
@@ -144,11 +142,16 @@ void MidiClip::onPlayheadStateChange(any data) {
   }
 }
 
-void MidiClip::incTickCounter(/*SongPos song_pos*/) {
-  auto stateHandler = clip_state_map.find(state);
-  if (stateHandler != clip_state_map.end()) {
-    stateHandler->second();
+void MidiClip::incTickCounter(PlayheadTick &playheadTick) {
+  if(playheadTick.precount){
+    onPrecountTick();
+  }else{
+    auto stateHandler = clip_state_map.find(state);
+    if (stateHandler != clip_state_map.end()) {
+      stateHandler->second();
+    }
   }
+  
 }
 
 void MidiClip::onPrecountTick(/*SongPos song_pos*/) { precounter += 1; }

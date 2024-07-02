@@ -50,7 +50,7 @@ int main(int, char **) {
   MidiEventRegistry &mer = MidiEventRegistry::getInstance();
   auto midiEngine = MidiEngine(true);
 
-  for(auto [name, device] : midiEngine.inputDevices){
+  for(auto &[name, device] : midiEngine.inputDevices){
     std::cout << name << std::endl;
   }
   midiEngine.activate();

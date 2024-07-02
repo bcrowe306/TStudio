@@ -216,7 +216,7 @@ namespace tstudio {
     }
     void Session::playingState()
     {
-        for(auto clip : clips){
+        for(auto &clip : clips){
             auto state = clip->getState();
             std::cout << "setting clips states to playing\n" << ClipStateMap[state] << std::endl;
 
@@ -323,7 +323,7 @@ namespace tstudio {
     void Session::activateClip(shared_ptr<MidiClip> activeClip, ClipState state)
     {
         auto activePosition = activeClip->getPosition();
-        for(auto clip: clips){
+        for(auto &clip: clips){
             auto cPos = clip->getPosition();
             // Only get clips is the track specified by activePosition
             if(cPos.first == activePosition.first){

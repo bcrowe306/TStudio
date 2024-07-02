@@ -7,11 +7,12 @@
 #include <string>
 
 using namespace lab;
-
+using HandlerId = std::size_t;
 namespace tstudio {
 
 Playhead::Playhead(shared_ptr<AudioContext> audioContext)
     : FunctionNode((*audioContext)) {
+  tickHandlers.reserve(4096);
   this->audioContext = audioContext;
   _setSamplesPerTick();
   metronomeBeat = std::make_shared<SampledAudioNode>((*audioContext));
@@ -46,6 +47,27 @@ void Playhead::onMetronomeBeat(bool isDownBeat) {
     else {
       metronomeBeat->schedule(0.f);
       
+    }
+  }
+};
+HandlerId Playhead::subscribeTickHandler(const function<void(PlayheadTick&)> &handler){
+  HandlerId id = nextHandlerId++;
+  tickHandlers.emplace_back(id, handler);
+  return id;
+};
+
+void Playhead::unsubscribeTickHandler(HandlerId id){
+  tickHandlers.erase(
+      std::remove_if(tickHandlers.begin(), tickHandlers.end(),
+                     [id](const auto &pair) { return pair.first == id; }),
+      tickHandlers.end()
+  );
+};
+
+void Playhead::notifyTick(){
+  for (const auto &[id, handler] : tickHandlers) {
+    if (handler != nullptr) {
+      handler(playheadTick);
     }
   }
 };
@@ -122,35 +144,43 @@ PlayheadState Playhead::getState() { return _state; }
 void Playhead::handleTick() {
   
   if (_state == PlayheadState::PRECOUNT) {
-    if (precount_bar_tick == __ticksPerBar() * preCountBars.value) {
+    playheadTick.precount = true;
+    if (playheadTick.precountTick == __ticksPerBar() * preCountBars.value) {
       setState(PlayheadState::RECORDING);
-      precount_bar_tick = 0;
+      playheadTick.precount = false;
+      playheadTick.precountTick = 0;
     } else {
-      eventRegistry.notify("playhead.precount_tick", precount_bar_tick);
-      _generateMetronomeBeats(precount_bar_tick);
-      precount_bar_tick++;
+      notifyTick();
+      // eventRegistry.notify("playhead.precount_tick", playheadTick.precountTick); TODO: Deprecated
+      _generateMetronomeBeats(playheadTick.precountTick);
+      playheadTick.precountTick++;
     }
-    ticks = 0;
+    playheadTick.tickCount = 0;
   } else if (_state == PlayheadState::PLAYING ||_state == PlayheadState::RECORDING) {
-    
+
+    // No longer in precount, set tick to 0 and precount bool to false
+    playheadTick.precountTick = 0;
+    playheadTick.precount = false;
+
     int launch_quantization_value = LaunchQuantizationHelper::getQuantizeGrid(
         launchQuantization, time_sig.first);
-    if (ticks % launch_quantization_value == 0) {
+    if (playheadTick.tickCount % launch_quantization_value == 0) {
       eventRegistry.notify("playhead.launch", true);
     }
-    _generateMetronomeBeats(ticks);
-    eventRegistry.notify("playhead.tick", ticks);
-    last_play_position_tick = ticks;
-    ticks++;
+    _generateMetronomeBeats(playheadTick.tickCount);
+
+    notifyTick();
+    // eventRegistry.notify("playhead.tick", ticks); TODO: Depracated
+    last_play_position_tick = playheadTick.tickCount;
+    playheadTick.tickCount++;
   } else if (_state == PlayheadState::STOPPED) {
     if (stop_mode == StopMode::RETURN_TO_ZERO) {
-      counter = 0;
-      ticks = 0;
+      playheadTick.sampleCount = 0;
+      playheadTick.tickCount = 0;
     } else if (stop_mode == StopMode::RETURN_TO_PLAY) {
-      counter = last_play_position_sample;
-      ticks = last_play_position_tick;
+      playheadTick.sampleCount = last_play_position_sample;
+      playheadTick.tickCount = last_play_position_tick;
     }
-    precount_bar_tick = 0;
   }
 }
 void Playhead::_generateMetronomeBeats(int &bar_tick) {
@@ -173,21 +203,21 @@ void Playhead::callback(ContextRenderLock &r, FunctionNode *me, int channel,
   for (size_t i = 0; i < bufferSize; i++) {
     //  istick
     if (phn->getState() != PlayheadState::STOPPED) {
-      if (phn->isMod(phn->counter, phn->samplesPerTick))
+      if (phn->isMod(phn->playheadTick.sampleCount, phn->samplesPerTick))
         phn->handleTick();
       // notify("song_pos", song_pos);
-      phn->counter++;
-      phn->last_play_position_sample = phn->counter;
+      phn->playheadTick.sampleCount++;
+      phn->last_play_position_sample = phn->playheadTick.sampleCount;
       ;
     } else {
       if (phn->stop_mode == StopMode::RETURN_TO_ZERO) {
-        phn->counter = 0;
-        phn->ticks = 0;
+        phn->playheadTick.sampleCount = 0;
+        phn->playheadTick.tickCount = 0;
       } else if (phn->stop_mode == StopMode::RETURN_TO_PLAY) {
-        phn->counter = phn->last_play_position_sample;
-        phn->ticks = phn->last_play_position_tick;
+        phn->playheadTick.sampleCount = phn->last_play_position_sample;
+        phn->playheadTick.tickCount = phn->last_play_position_tick;
       }
-      phn->precount_bar_tick = 0;
+      phn->playheadTick.precountTick = 0;
     }
   }
 }
