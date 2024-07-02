@@ -132,17 +132,19 @@ Session::Session(shared_ptr<AudioContext> context,
     };
     MidiClipType& Session::addClip(){
 
-        auto currentTrack = selectedTrack();
-        auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
-
-        if(selectedClip() == MidiClipType(nullptr)){
-            auto &clip = clips.emplace_back(make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex));
-            m_selectedClipIndex = clips.size() - 1;
-            clip->addOutputNode(currentTrack);
-            eventRegistry.notify("session.clip_create", m_selectedClipIndex);
-            return clip;
-        }
-        return midiClipNull;
+      auto currentTrack = selectedTrack();
+      auto clipNumber =
+          std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
+      if (selectedClip() == MidiClipType(nullptr)) {
+        auto &clip = clips.emplace_back(make_shared<MidiClip>(
+            this->playhead, currentTrack->name.value + " " + clipNumber,
+            m_selectedTrackIndex, m_selectedSceneIndex));
+        m_selectedClipIndex = clips.size() - 1;
+        clip->addOutputNode(currentTrack);
+        eventRegistry.notify("session.clip_create", m_selectedClipIndex);
+        return clip;
+      }
+      return midiClipNull;
     };
     MidiClipType& Session::newClip(int length){
 
@@ -150,7 +152,7 @@ Session::Session(shared_ptr<AudioContext> context,
         auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
         if (selectedClip() == MidiClipType(nullptr))
         {
-            auto &clip =clips.emplace_back(make_unique<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex));
+            auto &clip =clips.emplace_back(make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex, length));
             m_selectedClipIndex = clips.size() - 1;
             clip->addOutputNode(currentTrack);
             eventRegistry.notify("session.clip_create", m_selectedClipIndex);
@@ -238,10 +240,9 @@ Session::Session(shared_ptr<AudioContext> context,
         {
             auto &clip = selectedClip();
             if (clip == midiClipNull){
-                activateClip(addClip(), ClipState::RECORDING);
-
-            }
-            else{
+              auto nClip = addClip();
+              activateClip(nClip, ClipState::RECORDING);
+            }else{
                 activateClip(clip, ClipState::RECORDING);
             }
         }
@@ -254,11 +255,12 @@ Session::Session(shared_ptr<AudioContext> context,
             auto &clip = selectedClip();
             if (clip == midiClipNull)
             {
-                activateClip(addClip(), ClipState::RECORDING);
-
+                auto nClip = addClip();
+                activateClip(nClip, ClipState::RECORDING);
+            }else{
+                activateClip(clip, ClipState::RECORDING);
             }
 
-            activateClip(clip, ClipState::RECORDING);
         }
     }
 

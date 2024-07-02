@@ -117,7 +117,7 @@ int main(int, char **) {
   char c;
   std::array<char, 2> C;
   while (true) {
-    // clear_screen(original);
+    clear_screen(original);
     // Print the ASCII value of the key pressed
     std::cout << "You pressed: " << c << " (ASCII: " << static_cast<int>(c)
               << ")\n";
@@ -142,7 +142,7 @@ int main(int, char **) {
         else
           OUT << WHITE;
           auto &clip = session->selectClipByPosition(std::pair<int, int>{trackIndex, sceneIndex});
-          if (clip != nullptr)
+          if (clip != MidiClipType(nullptr))
           {
             OUT << clip->name.value << " | ";
           }
