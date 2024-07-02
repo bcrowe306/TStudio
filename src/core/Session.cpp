@@ -12,9 +12,9 @@ namespace tstudio {
         : context(context), playhead(playhead), id( GenerateUUID() ), EventBase()
     {
         // Preallocate Scene and Track vectors
-        scenes.reserve(16);
-        tracks.reserve(16);
-        clips.reserve(256);
+        scenes.reserve(64);
+        tracks.reserve(64);
+        clips.reserve(4096);
 
         // Setup Main output for tracks
         output = make_shared<AnalyserNode>(*context);
@@ -128,7 +128,7 @@ namespace tstudio {
         auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
 
         if(selectedClip() == nullptr){
-            auto clip = make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
+            auto clip = make_unique<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
             clips.emplace_back(clip);
             m_selectedClipIndex = clips.size() - 1;
             clip->addOutputNode(currentTrack);
@@ -145,7 +145,7 @@ namespace tstudio {
         auto clipNumber = std::to_string(getClipsInTrack(m_selectedTrackIndex).size() + 1);
         if (selectedClip() == nullptr)
         {
-            auto clip = make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
+            auto clip = make_unique<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex);
             clips.emplace_back(clip);
             m_selectedClipIndex = clips.size() - 1;
             clip->addOutputNode(currentTrack);
@@ -280,7 +280,7 @@ namespace tstudio {
         }
     };
 
-    shared_ptr<MidiClip> Session::selectedClip(){
+    unique_ptr<MidiClip> Session::selectedClip(){
       for (auto c : clips) {
         auto clipPosition = c->getPosition();
         if (clipPosition.first == m_selectedTrackIndex &&
@@ -320,7 +320,7 @@ namespace tstudio {
         );
         return clipsInScene;
     }
-    void Session::activateClip(shared_ptr<MidiClip> activeClip, ClipState state)
+    void Session::activateClip(unique_ptr<MidiClip> activeClip, ClipState state)
     {
         auto activePosition = activeClip->getPosition();
         for(auto &clip: clips){

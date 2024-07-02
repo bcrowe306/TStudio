@@ -255,6 +255,9 @@ int main(int, char **) {
     if (c == 's') {
       session->nextScene();
     }
+    if (c == 'd') {
+      session->deleteClip();
+    }
 
     if (c == 'q')
       break;
