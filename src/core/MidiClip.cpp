@@ -2,6 +2,7 @@
 #include "core/Playhead.h"
 #include <iostream>
 #include <charconv>
+#include <utility>
 
 using namespace placeholders;
 
@@ -130,6 +131,24 @@ int MidiClip::getLength(){
 
 int MidiClip::getCounter(){
   return this->counter;
+};
+
+std::pair<int, int> MidiClip::getNoteRange() {
+  if (data.empty()) {
+    return std::pair<int, int>{0, 0}; // Return (0, 0) if the map is empty
+  }
+
+  int minKey = std::numeric_limits<int>::max();
+  int maxKey = std::numeric_limits<int>::min();
+
+  // Find the minimum and maximum keys
+  for (const auto &pair : data) {
+    minKey = std::min(minKey, pair.first);
+    maxKey = std::max(maxKey, pair.first);
+  }
+
+  // Return the difference between maxKey and minKey
+  return std::pair<int, int>{minKey,maxKey};
 };
 
 float MidiClip::playheadPosPercentage(){

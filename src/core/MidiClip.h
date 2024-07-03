@@ -111,6 +111,7 @@ namespace tstudio {
     void deInit();
     int getLength();
     int getCounter();
+    std::pair<int, int> getNoteRange();
     float playheadPosPercentage();
     ClipState getNextClipState() const;
 
