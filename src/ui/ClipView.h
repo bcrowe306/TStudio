@@ -101,60 +101,66 @@ void DrawMidiEvents(ImDrawList* draw_list,ImVec2 &origin, ImVec2 &windowSize, sh
     }
 }
 
-static void ClipView(shared_ptr<Session> session, shared_ptr<Playhead> playhead) {
-    auto clip = session->selectedClip();
-    // Details
-    static float grayscale = 0.113f;
-    auto grayColor = ImVec4(grayscale, grayscale, grayscale, 1.f);
-    static float x_gridSize = 20.f;
-    static float y_gridSize = 20.f;
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, grayColor);
-    ImGui::BeginChild("Clip Details",ImVec2(240.f, ImGui::GetContentRegionAvail().y));
-    ImGui::SliderFloat("x-grid", &x_gridSize, 2.f, 200.f);
-    ImGui::SliderFloat("y-grid", &y_gridSize, 2.f, 200.f);
-    
-    if (clip != MidiClipType(nullptr)) {
-      int clipLength = clip->getLength();
-      ImGui::Text(clip->name.value.c_str());
-      auto isLengthChanged = ImGui::DragInt("Length", &clipLength,2,2);
-      if(isLengthChanged){
-        clip->setLength(clipLength);
-      }
+void DrawPlayhead(ImDrawList* draw_list,ImVec2 &origin, ImVec2 &windowSize, shared_ptr<MidiClip> clip){
+  ImU32 color = IM_COL32(225, 225, 225, 127);
+  auto clipPosition = windowSize.x * ((float)clip->getCounter() / (float)clip->getLength()) + origin.x;
+  draw_list->AddLine(ImVec2(clipPosition, origin.y), ImVec2(clipPosition, origin.y + windowSize.y), color, 5.f);
+}
+
+    static void ClipView(shared_ptr<Session> session,
+                         shared_ptr<Playhead> playhead) {
+  auto clip = session->selectedClip();
+  // Details
+  static float grayscale = 0.113f;
+  auto grayColor = ImVec4(grayscale, grayscale, grayscale, 1.f);
+  static float x_gridSize = 20.f;
+  static float y_gridSize = 20.f;
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, grayColor);
+  ImGui::BeginChild("Clip Details",
+                    ImVec2(240.f, ImGui::GetContentRegionAvail().y));
+  ImGui::SliderFloat("x-grid", &x_gridSize, 2.f, 200.f);
+  ImGui::SliderFloat("y-grid", &y_gridSize, 2.f, 200.f);
+
+  if (clip != MidiClipType(nullptr)) {
+    int clipLength = clip->getLength();
+    ImGui::Text(clip->name.value.c_str());
+    auto isLengthChanged = ImGui::DragInt("Length", &clipLength, 2, 2);
+    if (isLengthChanged) {
+      clip->setLength(clipLength);
     }
-    ImGui::EndChild(); 
-    ImGui::PopStyleColor();
-    ImGui::SameLine();
-    // Clip Event
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, grayColor);
-    ImGui::BeginChild("Clip Events",ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y));
-        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+  }
+  ImGui::EndChild();
+  ImGui::PopStyleColor();
+  ImGui::SameLine();
+  // Clip Event
+  ImGui::PushStyleColor(ImGuiCol_ChildBg, grayColor);
+  ImGui::BeginChild("Clip Events", ImVec2(ImGui::GetContentRegionAvail().x,
+                                          ImGui::GetContentRegionAvail().y));
+  ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
-        // Draw a scalable grid
-        if(clip != MidiClipType(nullptr)){
-          ImVec2 origin = ImGui::GetWindowPos();
-          ImVec2 size = ImGui::GetWindowSize();
-          ImU32 grid_color = IM_COL32(80, 80, 80, 127);
-          auto minMaxNotes = clip->getNoteRange();
-          auto noterange = minMaxNotes.second - minMaxNotes.first;
-          DrawGrid(draw_list, origin, size, clip->getLength(), "1/16",
-                   noterange);
-          ImGui::Text(clip->name.value.c_str());
-          // Draw grid events
-          DrawMidiEvents(draw_list, origin, size, clip);
+  // Draw a scalable grid
+  if (clip != MidiClipType(nullptr)) {
+    ImVec2 origin = ImGui::GetWindowPos();
+    ImVec2 size = ImGui::GetWindowSize();
+    ImU32 grid_color = IM_COL32(80, 80, 80, 127);
+    auto minMaxNotes = clip->getNoteRange();
+    auto noterange = minMaxNotes.second - minMaxNotes.first;
+    DrawGrid(draw_list, origin, size, clip->getLength(), "1/16", noterange);
+    ImGui::Text(clip->name.value.c_str());
+    // Draw grid events
+    DrawMidiEvents(draw_list, origin, size, clip);
+    DrawPlayhead(draw_list, origin, size, clip);
+    // Check and display event clicks
+    // for (const auto &event : gridEvents) {
+    //   if (event.isClicked) {
+    //     ImGui::Text("Event at (%.0f, %.0f) was clicked!",
+    //                 event.position.x, event.position.y);
+    //   }
+    // }
+  }
 
-          // Check and display event clicks
-          // for (const auto &event : gridEvents) {
-          //   if (event.isClicked) {
-          //     ImGui::Text("Event at (%.0f, %.0f) was clicked!",
-          //                 event.position.x, event.position.y);
-          //   }
-          // }
-        }
-
-        
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-        
+  ImGui::EndChild();
+  ImGui::PopStyleColor();
 }
 
 #endif // !CLIPVIEW_H
