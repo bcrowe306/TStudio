@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED)
+option(HELLOIMGUI_USE_GLFW3 "Use Glfw3 as a platform backend" ON)
+option(HELLOIMGUI_HAS_OPENGL3 "Use OpenGL3 as a rendering backend" ON)
 project(TStudio VERSION 0.1.0 LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
@@ -47,6 +49,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::libusb)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CAIROMM REQUIRED IMPORTED_TARGET cairomm-1.16)
 target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::CAIROMM)
+
+# glad
+find_package(glad CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE glad::glad)
+
+# hello-imgui
+find_package(hello-imgui CONFIG REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE hello-imgui::hello_imgui)
 
 # stduuid
 find_package(stduuid CONFIG REQUIRED)

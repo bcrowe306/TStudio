@@ -59,9 +59,19 @@ using MidiClipType = shared_ptr<MidiClip>;
         shared_ptr<AnalyserNode> output;
 
         // Methods
+
+        // Adds a track to the session
         shared_ptr<TrackNode> addTrack();
+
+        // Deletes a track from the session
         void deleteTrack();
+
+        // Gets a track by index.
+        shared_ptr<TrackNode> getTrackByIndex(int);
+        // Changes the order of the tracks
         void reorderTrack(int startIndex, int endIndex);
+
+        // Gets the currently selected Track
         shared_ptr<TrackNode> selectedTrack();
         shared_ptr<TrackNode> selectTrack(int);
         Scene selectScene(int);
@@ -94,6 +104,19 @@ using MidiClipType = shared_ptr<MidiClip>;
         // Delete scene
         void deleteScene(); 
 
+        // Select gridPosition by int trackIndex, int sceneIndex
+        void selectPosition(int, int);
+
+        // Activate gridPosition by pair<int trackIndex, int sceneIndex>
+        void activatePosition(std::pair<int, int>);
+        
+        // Activate gridPosition by int trackIndex, int sceneIndex
+        void activatePosition(int, int);
+
+        // Select gridPosition by pair<int trackIndex, int sceneIndex>
+        void selectPosition(std::pair<int, int>);
+
+
         vector<reference_wrapper<const MidiClipType>> getClipsInTrack(int);
         vector<reference_wrapper<const MidiClipType>> getClipsInScene(int);
 
@@ -117,6 +140,15 @@ using MidiClipType = shared_ptr<MidiClip>;
 
         // Gets the clip at the provided position std::pair<int trackIndex, int sceneIndex>. Return nullptr if no clip is found.
         MidiClipType& selectClipByPosition(std::pair<int, int> clipPosition);
+
+        // Gets the clip at the provided position using int trackIndex, int sceneIndex
+        MidiClipType& selectClipByPosition(int trackIndex, int sceneIndex);
+
+        // Returns bool if the current clip position is selected, uses position
+        bool isClipSelected(std::pair<int, int>);
+
+        // Returns bool if the current clip position is selected, uses int trackIndex, int sceneIndex
+        bool isClipSelected(int, int);
 
         // Gets the clip at the current track and scene index.
         // If no clip is present, returns nullptr.

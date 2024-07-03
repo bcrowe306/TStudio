@@ -37,9 +37,22 @@ Playhead::Playhead(shared_ptr<AudioContext> audioContext)
 };
 
 Playhead ::~Playhead(){};
+void Playhead::setMetronomeEnabled(bool enabled){
+  m_metronomeEnabled = enabled;
+};
+
+bool Playhead::toggleMetronomeEnabled(){
+  m_metronomeEnabled = !m_metronomeEnabled;
+  return m_metronomeEnabled;
+};
+
+bool Playhead::getMetronomeEnabled(){
+  return m_metronomeEnabled;
+};
 
 void Playhead::onMetronomeBeat(bool isDownBeat) {
-  if (enabled) {
+  if (m_metronomeEnabled)
+  {
     if (isDownBeat){
       metronomeDownBeat->schedule(0.f);
 

@@ -123,6 +123,19 @@ void MidiClip::clipRecordingState() {
 pair<int, int> MidiClip::getPosition(){
   return pair<int, int>{trackIndex, sceneIndex};
 };
+
+int MidiClip::getLength(){
+  return this->length;
+};
+
+int MidiClip::getCounter(){
+  return this->counter;
+};
+
+float MidiClip::playheadPosPercentage(){
+  return (float)counter / (float)length;
+};
+
 void MidiClip::setPosition(int trackIndex, int sceneIndex){
   this->trackIndex = trackIndex;
   this->sceneIndex = sceneIndex;

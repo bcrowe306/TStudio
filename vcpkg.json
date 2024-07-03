@@ -1,6 +1,14 @@
 {
   "dependencies": [
     "cairomm",
+    "glad",
+    {
+      "name": "hello-imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    },
     "libusb",
     "rtmidi",
     "stduuid",

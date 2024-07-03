@@ -109,6 +109,9 @@ namespace tstudio {
     void setState(ClipState );
     void setNextClipState(ClipState);
     void deInit();
+    int getLength();
+    int getCounter();
+    float playheadPosPercentage();
     ClipState getNextClipState() const;
 
     pair<int,int> getPosition();

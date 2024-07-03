@@ -84,6 +84,9 @@ public:
 
   // Methods
   void onMetronomeBeat(bool isDownBeat);
+  void setMetronomeEnabled(bool);
+  bool getMetronomeEnabled();
+  bool toggleMetronomeEnabled();
   void setTempo(float tempo);
   float getTempo();
   bool isMod(int numerator, int denomenator);
@@ -113,6 +116,7 @@ public:
   
 
 private:
+  bool m_metronomeEnabled = true;
   PlayheadState _state = PlayheadState::STOPPED;
   PlayheadState _previous_state;
   atomic<HandlerId> nextHandlerId{0};
