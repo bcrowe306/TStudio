@@ -203,6 +203,7 @@ Session::Session(shared_ptr<AudioContext> context,
             auto &clip =clips.emplace_back(make_shared<MidiClip>(this->playhead, currentTrack->name.value + " " + clipNumber, m_selectedTrackIndex, m_selectedSceneIndex, length));
             m_selectedClipIndex = clips.size() - 1;
             clip->addOutputNode(currentTrack);
+            clip->color.set(currentTrack->color.value);
             eventRegistry.notify("session.clip_create", m_selectedClipIndex);
             return clip;
         }

@@ -125,12 +125,11 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   auto label = std::to_string(cellPosition.first + cellPosition.second * session->tracks.size());
   auto triggerButtonClicked = ImGui::InvisibleButton(
       (label + "trigger").c_str(), ImVec2(trigger_button_width, cellSize.y));
-
   if (triggerButtonClicked) {
     session->selectClipByPosition(cellPosition);
     session->activatePosition(cellPosition.first, cellPosition.second);
   }
-
+  
   ImVec2 p = ImGui::GetItemRectMin();
   ImVec2 p_max = ImGui::GetItemRectMax();
   ImGui::SameLine();
@@ -138,15 +137,22 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   // Clip click
   bool cellClicked = ImGui::InvisibleButton(
       label.c_str(), ImVec2(width - trigger_button_width, height));
+  if (ImGui::BeginPopupContextItem()) {
+        ImGui::MenuItem("New");
+        ImGui::MenuItem("Copy");
+        ImGui::MenuItem("Delete");
+        ImGui::MenuItem("Duplicate");
+    ImGui::EndPopup();
+  }
+
   if (cellClicked) {
-    std::cout << label << std::endl;
     session->selectPosition(cellPosition);
   }
+  
   ImVec2 p2 = ImGui::GetItemRectMin();
   ImVec2 p2_max = ImGui::GetItemRectMax();
 
   // Render cell
-
   if (clip != MidiClipType(nullptr)) {
     DrawClipStates(draw_list, clip, playhead, p, p2_max, trigger_button_width);
   } else {
@@ -242,6 +248,14 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   // Draw selected border
   if (selected) {
     draw_list->AddRect(p, p2_max, U32FromHex(BOOL_ON_COLOR), 0.f, NULL);
+  }
+  if(ImGui::IsMouseDoubleClicked(0)){
+    auto cellMin = ImGui::GetItemRectMin();
+    auto cellMax = ImGui::GetItemRectMax();
+    std::cout << cellMin.x << " : " << io.MousePos.x << " : " <<  cellMax.x << std::endl;
+    if(io.MousePos.x > cellMin.x && io.MousePos.x < cellMax.x && io.MousePos.y > cellMin.y && io.MousePos.y < cellMax.y){
+      session->newClip(2);
+    }
   }
 }
 
