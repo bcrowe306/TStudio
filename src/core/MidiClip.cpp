@@ -10,10 +10,10 @@ namespace tstudio {
 
 MidiClip::MidiClip(shared_ptr<Playhead> playhead, const string &name,
                    int length_in_bars, ClipState state)
-    : length_in_bars(length_in_bars), state(state), playhead(playhead) 
+    :state(state), playhead(playhead) 
   {
     this->name.set(name);
-    init();
+    init(length_in_bars);
 };
 MidiClip::MidiClip(shared_ptr<Playhead> playhead, const string &name, int trackIndex, int sceneIndex,
                    int length_in_bars, ClipState state)
@@ -21,7 +21,7 @@ MidiClip::MidiClip(shared_ptr<Playhead> playhead, const string &name, int trackI
     playhead(playhead), trackIndex(trackIndex), sceneIndex(sceneIndex)
   {
     this->name.set(name);
-    init();
+    init(length_in_bars);
 };
 
 void MidiClip::deInit(){
@@ -34,8 +34,14 @@ MidiClip::~MidiClip(){
   deInit();
 }
 
-void MidiClip::init() {
-  setLength();
+void MidiClip::init(int bars) {
+  launchEventHandlers.reserve(64);
+  if (bars > 0) {
+    songPosition.bar = length_in_bars;
+  }
+  songPosition.time_sig = playhead->time_sig;
+  songPosition.tpqn = playhead->tpqn;
+  setLength(songPosition.getTickCount());
 
   handlerId = playhead->subscribeTickHandler(std::bind(&MidiClip::incTickCounter, this, _1));
   playheadStateHandlerId = eventRegistry.subscribe("playhead.state", bind(&MidiClip::onPlayheadStateChange, this, _1));
@@ -104,6 +110,14 @@ void MidiClip::resetLoopClip() {
   }
 }
 
+void MidiClip::setLoopStatus(bool isLooping) {
+  looping = isLooping;
+}
+
+bool MidiClip::getLoopStatus() {
+  return looping;
+}
+
 void MidiClip::clipPlayingState() {
   play();
   counter += 1;
@@ -159,6 +173,10 @@ void MidiClip::setPosition(int trackIndex, int sceneIndex){
   this->trackIndex = trackIndex;
   this->sceneIndex = sceneIndex;
 };
+
+void MidiClip::setTimeSig(pair<int, int> time_sig){
+  songPosition.time_sig = time_sig;
+};
 void MidiClip::clipLaunchingState() { counter = 0; }
 
 void MidiClip::clipDisabledState() { counter = 0; }
@@ -202,10 +220,13 @@ std::tuple<int, int, int> MidiClip::getPosition() const {
   return std::make_tuple(bar + 1, beat + 1, tick + 1);
 }
 
-void MidiClip::setLength() {
-  if (length_in_bars > 0) {
-    length = length_in_bars * playhead->time_sig.first * playhead->tpqn;
+void MidiClip::setLength(int length) { 
+  this->length = length;
+  songPosition.setFromTick(length); 
   }
+
+void MidiClip::setLengthInBars(int bars) {
+  length = length_in_bars * playhead->time_sig.first * playhead->tpqn;
 }
 
 void MidiClip::increaseLength() { length = counter + 2; }
@@ -295,11 +316,10 @@ ClipState MidiClip::getState() const { return state; }
 
 void MidiClip::quantizeClipLength(ClipState state) {
   if (playhead->launchQuantization != LaunchQuantization::Off) {
-    length = Quantize(
-        length,
-        LaunchQuantizationHelper::getQuantizeNumber(playhead->launchQuantization),
-        1.0f);
-        std::cout << length << std::endl;
+    setLength(Quantize(length,
+                       LaunchQuantizationHelper::getQuantizeNumber(
+                           playhead->launchQuantization),
+                       1.0f));
   }
 }
 
@@ -326,10 +346,7 @@ void MidiClip::setState(ClipState newState) {
 
 int MidiClip::getLength() const { return length; }
 
-void MidiClip::setLength(int length) {
-  this->length = length;
-  notify("length", length);
-}
+
 
 float MidiClip::getLengthInBars() const {
   return static_cast<float>(length) / (playhead->tpqn * playhead->time_sig.first);

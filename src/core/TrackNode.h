@@ -40,6 +40,7 @@ namespace tstudio {
         BoolParam solo = BoolParam("solo", "Solo", false, "Toggle");
         BoolParam arm = BoolParam("arm", "arm", false, "Toggle");
         FloatParam pan = FloatParam("pan", "Pan", .5f, "Slider");
+        StringParam color = StringParam("color", "Color", "", "Text");
         shared_ptr<GainNode> volumeNode;
         shared_ptr<InstrumentDevice> instrument;
         shared_ptr<StereoPannerNode> panNode;
@@ -50,6 +51,7 @@ namespace tstudio {
         tstudio::MidiEventRegistry &midiEventRegistry;
         tstudio::MidiMsgFilter midiMsgFilter;
         TrackNode(shared_ptr<AudioContext>);
+
         void add_clip(shared_ptr<MidiClip>);
         void remove_clip(shared_ptr<MidiClip>);
         void set_midi_device(std::string);

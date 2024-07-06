@@ -8,6 +8,7 @@
 #include "core/Playhead.h"
 #include "library/UUID_Gen.h"
 #include "library/Parameter.h"
+#include "library/Browser.h"
 #include "library/EventRegistry.h"
 #include <utility>
 #include <vector>
@@ -57,6 +58,7 @@ using MidiClipType = shared_ptr<MidiClip>;
         vector<Scene> scenes;
         vector<MidiClipType> clips;
         shared_ptr<AnalyserNode> output;
+        shared_ptr<Browser> browser;
 
         // Methods
 

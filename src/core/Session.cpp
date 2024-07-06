@@ -3,8 +3,11 @@
 #include "core/MidiClip.h"
 #include "core/SamplerNode.h"
 #include "core/Session.h"
+#include "library/Browser.h"
+#include "ui/Colors.h"
 #include <algorithm>
 #include <any>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -22,9 +25,11 @@ Session::Session(shared_ptr<AudioContext> context,
   scenes.reserve(64);
   tracks.reserve(64);
   clips.reserve(4096);
+  auto HOME = (std::string)getenv("HOME") + "/Documents";
+  this->browser = make_shared<Browser>(HOME);
 
-  // Setup Main output for tracks
-  output = make_shared<AnalyserNode>(*context);
+      // Setup Main output for tracks
+      output = make_shared<AnalyserNode>(*context);
   context->connect(context->destinationNode(), output);
 
   // Subscribe to playhead state events
@@ -45,8 +50,11 @@ Session::Session(shared_ptr<AudioContext> context,
     }
 
     shared_ptr<TrackNode> Session::addTrack(){
+        auto trackIndex = (int)tracks.size();
         auto newTrackNumber = std::to_string(tracks.size() + 1);
+        auto colorIndex = rand() % (int)COLOR_MAP.size();
         auto newTrack = make_shared<TrackNode>(context);
+        newTrack->color.set(COLOR_MAP[colorIndex]);
         newTrack->name.set(newTrackNumber + " Ins Track");
         tracks.emplace_back(newTrack);
 
@@ -180,6 +188,7 @@ Session::Session(shared_ptr<AudioContext> context,
             m_selectedTrackIndex, m_selectedSceneIndex));
         m_selectedClipIndex = clips.size() - 1;
         clip->addOutputNode(currentTrack);
+        clip->color.set(currentTrack->color.value);
         eventRegistry.notify("session.clip_create", m_selectedClipIndex);
         return clip;
       }
@@ -311,11 +320,13 @@ Session::Session(shared_ptr<AudioContext> context,
             track = tracks[m_selectedTrackIndex];
         }else{
             m_selectedTrackIndex = index;
+            for (auto t : tracks) {
+              (t->id == track->id) ? t->arm.set(true) : t->arm.set(false);
+                
+            }
         }
 
-        for (auto t: tracks){
-            (t->id == track->id) ? t->arm.set(true) : t->arm.set(false);
-        }
+        
         return track;
     };
     shared_ptr<TrackNode> Session::getTrackByIndex(int index)

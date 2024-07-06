@@ -10,8 +10,10 @@
 #include <memory>
 #include <utility>
 #include "core/ClipEvent.h"
+#include "library/Parameter.h"
 #include "core/MidiNode.h"
 #include "core/MidiMsg.h"
+#include "core/SongPosition.h"
 #include "library/EventRegistry.h"
 
 using std::shared_ptr;
@@ -80,6 +82,8 @@ namespace tstudio {
     
     unordered_map<int, vector<ClipEvent>> data;
     unordered_map<int, ClipEvent> note_map;
+    SongPosition songPosition;
+    StringParam color = StringParam("color", "Color", "", "Text");
     // Methods
     bool receive(MidiMsg &) override;
     void clipPlayingState();
@@ -104,11 +108,14 @@ namespace tstudio {
     void recordPrecount(MidiMsg);
     void recordEvent(ClipEvent);
     void resetLoopClip();
-    void setLength();
     void setLength(int );
+    void setLengthInBars(int);
+    void setTimeSig(pair<int, int>);
     void setState(ClipState );
     void setNextClipState(ClipState);
     void deInit();
+    bool getLoopStatus();
+    void setLoopStatus(bool);
     int getLength();
     int getCounter();
     std::pair<int, int> getNoteRange();
@@ -134,6 +141,9 @@ namespace tstudio {
     HandlerId playheadStateHandlerId;
     HandlerId playheadLaunchHandlerId;
 
+    // This vector holds functions that will be excecuted on the next launch event.
+    vector<function<void()>> launchEventHandlers;
+
 
     function<void(MidiMsg &)> onMidiClipOut;
     unordered_map<ClipState, function<void()>> clip_state_map = {
@@ -151,7 +161,7 @@ namespace tstudio {
 
     // Methods
     void quantizeClipLength(ClipState );
-    void init();
+    void init(int);
     
     void onLaunchEvent(any);
     ClipState processClipState(ClipState);

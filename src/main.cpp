@@ -10,21 +10,34 @@
 #include "core/Playhead.h"
 #include "library/ScrollView.h"
 #include "core/Session.h"
-#include "ui/ClipView.h"
 #include "libusb.h"
 #include <__functional/bind_front.h>
+#include <charconv>
 #include <cstddef>
 #include <cstdlib>
 #include <array>
+#include <cstring>
 #include <filesystem>
 #include <hello_imgui/app_window_params.h>
+#include <hello_imgui/hello_imgui_font.h>
 #include <hello_imgui/imgui_theme.h>
 #include <hello_imgui/runner_params.h>
 #include <hello_imgui/screen_bounds.h>
+#include "ui/FooterPanel.h"
+#include "ui/MainView.h"
+#include "ui/Sidebar.h"
+#include "ui/TrackListItem.h"
+#include "ui/TrackHeader.h"
+#include "ui/SessionCell.h"
+#include "ui/GridView.h"
+#include "ui/ClipView.h"
+#include "ui/Colors.h"
+#include "ui/LayoutDimensions.h"
 #include <imgui.h>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 #include "hello_imgui/hello_imgui.h"
 #include "library/UUID_Gen.h"
@@ -65,6 +78,7 @@ void ui(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
 {
   HelloImGui::RunnerParams params;
   params.appWindowParams.windowGeometry.fullScreenMode = HelloImGui::FullScreenMode::FullMonitorWorkArea;
+  params.fpsIdling.fpsIdle = 40.f;
   params.callbacks.SetupImGuiStyle = [&](){
     params.imGuiWindowParams.tweakedTheme.Theme = ImGuiTheme::ImGuiTheme_PhotoshopStyle;
     params.imGuiWindowParams.tweakedTheme.Tweaks.Rounding = 0.0f;
@@ -72,18 +86,20 @@ void ui(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
 
 
   };
+  params.callbacks.LoadAdditionalFonts = [](){
+    HelloImGui::LoadFont("fonts/OpenSans.ttf", 16.f);
+  };
   params.callbacks.ShowGui = [playhead, session]() 
   {
     // Get the window size
-    int window_width, window_height;
     auto space = ImGui::GetContentRegionAvail();
     // auto screenSize = runnerParams->appWindowParams.windowGeometry.size;
-    window_width = space.x;
-    window_height = space.y;
+    float window_width = space.x;
+    float window_height = space.y;
     // Set up panel sizes and positions
     float toolbar_height = 50.0f;
     float sidebar_width = 250.0f;
-    float footer_height = 250.0f;
+    float footer_height = 300.0f;
     float main_width = window_width - sidebar_width;
     float main_height = window_height - footer_height - toolbar_height;
     ImGui::GetStyle().WindowRounding = 0.1f;
@@ -215,113 +231,23 @@ void ui(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
     ImGui::Text(positionString);
     ImGui::PopID();
     ImGui::End();
+    auto sidebarPosition = ImVec2(0, toolbar_height);
+    auto sidebarSize = ImVec2(sidebar_width, main_height);
+    Sidebar(session, playhead, sidebarPosition, sidebarSize);
 
-    // Sidebar Panel
-    ImGui::SetNextWindowPos(ImVec2(0, toolbar_height));
-    ImGui::SetNextWindowSize(ImVec2(sidebar_width, main_height));
-    ImGui::Begin("Browser", NULL,
-                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoCollapse);
-    ImGui::Text("This is the sidebar.");
-    ImGui::End();
+    
+    auto footerPanelPosition = ImVec2(0, toolbar_height + main_height);
+    auto footerPanelSize = ImVec2(window_width, footer_height);
+    FooterPanel(session, playhead, footerPanelPosition, footerPanelSize);
 
-    // Footer Panel
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
-    ImGui::SetNextWindowPos(ImVec2(0, toolbar_height + main_height));
-    ImGui::SetNextWindowSize(ImVec2(window_width, footer_height));
-    ImGui::Begin("Footer", NULL,
-                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoCollapse |
-                     ImGuiWindowFlags_NoDecoration);
-    // Tabs in the footer panel
-    if (ImGui::BeginTabBar("FooterTabs")) {
-      if (ImGui::BeginTabItem("Device")) {
-        ImGui::Text("This is the Device tab.");
-        ImGui::EndTabItem();
-      }
-      if (ImGui::BeginTabItem("Clip",NULL, ImGuiTabItemFlags_SetSelected)) {
-        ClipView(session, playhead);
-        ImGui::EndTabItem();
-      }
-      if (ImGui::BeginTabItem("Track")) {
-        ImGui::Text("This is the Track tab.");
-        ImGui::EndTabItem();
-      }
-      ImGui::EndTabBar();
-    }
-    ImGui::End();
-    ImGui::PopStyleVar(1);
-
-    // Main Panel
-    ImGui::SetNextWindowPos(ImVec2(sidebar_width, toolbar_height));
-    ImGui::SetNextWindowSize(ImVec2(main_width, main_height));
-    ImGui::Begin("Main", NULL,
-                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
-    // Tracks Header
-    for (int trackIndex = 0; trackIndex < session->tracks.size();
-         trackIndex++) {
-      auto track = session->getTrackByIndex(trackIndex);
-      if (track != nullptr) {
-        ImGui::Selectable(track->name.value.c_str(),
-                          session->selectedTrackIndex() == trackIndex, 0,
-                          ImVec2(130, 20));
-        ImGui::SameLine();
-      }
-    }
-    ImGui::NewLine();
-    ImGui::Separator();
-
-    // Session Grid
-    for (int y = 0; y < session->scenes.size(); y++) {
-      for (int x = 0; x < session->tracks.size(); x++) {
-
-        bool selected = session->isClipSelected(x, y);
-        auto clip = session->selectClipByPosition(x, y);
-        bool clipSelectable = false;
-        // Trigger BUtton
-        ImGui::PushID(x * session->scenes.size() + y);
-        auto trigger = ImGui::Button("", ImVec2(20, 20));
-        if (trigger) {
-          session->activatePosition(x, y);
-        }
-        ImGui::PopID();
-        ImGui::SameLine();
-        ImGui::PushID(y * session->scenes.size() + x);
-        if (clip.get() != nullptr) {
-          auto counter = clip->playheadPosPercentage();
-          switch (clip->getState()) {
-          case ClipState::PLAYING:
-            ImGui::ProgressBar(counter, ImVec2(100, 20),
-                               clip->name.value.c_str());
-            break;
-
-          default:
-            clipSelectable = ImGui::Selectable(clip->name.value.c_str(),
-                                               session->isClipSelected(x, y), 0,
-                                               ImVec2(100, 20));
-
-            break;
-          }
-
-        } else {
-          clipSelectable = ImGui::Selectable(
-              "---", session->isClipSelected(x, y), 0, ImVec2(100, 20));
-        }
-        ImGui::PopID();
-        if (clipSelectable) {
-          sessionPosition.first = x;
-          sessionPosition.second = y;
-          session->selectPosition(x, y);
-        }
-
-        ImGui::SameLine();
-      }
-      ImGui::NewLine();
-    }
-    ImGui::End();
+    auto mainViewPosition = ImVec2(sidebar_width, toolbar_height);
+    auto mainViewSize = ImVec2(main_width, main_height);
+    MainView(session, playhead, mainViewPosition, mainViewSize);
+    
   };
-  HelloImGui::Run(params);
+  std::cout << "uiThread\n";
+  return HelloImGui::Run(params);
+  
 };
 
 int main(int, char **)
@@ -387,5 +313,6 @@ int main(int, char **)
     });
     std::string input;
     ui(session, playHead);
+    // std::thread uiThread(ui, session, playHead);
     std::cout << "Exiting...\n";
   }
