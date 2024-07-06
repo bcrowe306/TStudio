@@ -12,6 +12,7 @@
 
 void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead> playhead, ImVec2 position, ImVec2 size) {
   // Main Panel
+  
   ImGui::SetNextWindowPos(position);
   ImGui::SetNextWindowSize(size);
   ImGui::PushStyleColor(ImGuiCol_WindowBg,
@@ -21,6 +22,14 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
   ImGui::Begin("Main", NULL,
                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                    ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+  ImGuiIO &io = ImGui::GetIO();
+  bool isFocused = ImGui::IsWindowFocused();
+  // Implement Key commands
+  if(isFocused){
+    ImGuiKey start_key = ImGuiKey_NamedKey_BEGIN;
+    for (ImGuiKey key = start_key; key < ImGuiKey_NamedKey_END; key = (ImGuiKey)(key + 1)){
+    }
+  }
   // Tracks Header
   float width = 145.f;
   for (int trackIndex = 0; trackIndex < session->tracks.size(); trackIndex++) {
