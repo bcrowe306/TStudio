@@ -1,12 +1,7 @@
 #ifndef PLAYHEAD_H
 #define PLAYHEAD_H
-#include "LabSound/core/AudioBus.h"
-#include "LabSound/core/AudioContext.h"
-#include "LabSound/core/AudioNode.h"
-#include "LabSound/core/SampledAudioNode.h"
-#include "LabSound/extended/AudioContextLock.h"
-#include "LabSound/extended/AudioFileReader.h"
-#include "LabSound/extended/FunctionNode.h"
+#include "LabSound/LabSound.h"
+#include "core/SongPosition.h"
 #include "library/EventRegistry.h"
 #include "library/Parameter.h"
 #include <functional>
