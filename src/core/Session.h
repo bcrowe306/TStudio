@@ -65,6 +65,9 @@ using MidiClipType = shared_ptr<MidiClip>;
         // Adds a track to the session
         shared_ptr<TrackNode> addTrack();
 
+        // Deletes a track by track index. All clips that belong to this track will be deleted.
+        void deleteTrack(int);
+
         // Deletes a track from the session
         void deleteTrack();
 
@@ -131,6 +134,9 @@ using MidiClipType = shared_ptr<MidiClip>;
         // Delete clip in the current position
         void deleteClip();
 
+        // Delete the provided clip 
+        void deleteClip(MidiClipType clip);
+
         // Deletes clip in the provided position.
         void deleteClipAtPosition(std::pair<int, int>); 
 
@@ -155,6 +161,9 @@ using MidiClipType = shared_ptr<MidiClip>;
         // Gets the clip at the current track and scene index.
         // If no clip is present, returns nullptr.
         MidiClipType& selectedClip();
+
+        // Moves the clip to a new position in the grid. Will change track callbacks if necessary
+        void changeClipPosition(std::pair<int, int> currentPosition, std::pair<int, int> newPosition);
 
         // Activates the clip at sceneIndex. This stops all other clips in the track.
         void activateClip(MidiClipType&, ClipState);

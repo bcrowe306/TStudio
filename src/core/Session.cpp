@@ -69,6 +69,27 @@ Session::Session(shared_ptr<AudioContext> context,
 
         return newTrack;
     }
+    void Session::deleteTrack(int trackIndex){
+        auto track = getTrackByIndex(trackIndex);
+        if(track != nullptr){
+            // Remove clips from the track
+            auto clips = getClipsInTrack(trackIndex);
+            for (auto clip : clips)
+            {
+                deleteClip(clip);
+            }
+            
+            // Remove track from audio graph context and sync
+            context->disconnect(output, track->output);
+            context->synchronizeConnections();
+
+            // Remove track from tracks vector
+            auto it = std::find(tracks.begin(), tracks.end(), track);
+            tracks.erase(it);
+        }
+       
+    };
+
     void Session::nextTrack(){
         m_selectedTrackIndex = (m_selectedTrackIndex + 1 == tracks.size()) ? 0 : m_selectedTrackIndex + 1;
         auto track = selectTrack(m_selectedTrackIndex);
@@ -244,11 +265,28 @@ Session::Session(shared_ptr<AudioContext> context,
             }
         }
     }
+    void Session::deleteClip(MidiClipType clip){
+        if(clip != nullptr){
+            try
+            {
+                auto currentTrack = selectedTrack();
+                clip->removeOutputNode(currentTrack);
+                auto it = std::find(clips.begin(), clips.end(), clip);
+                clips.erase(it);
+            }
+            catch (const std::exception&)
+            {
+                LOG_ERROR("Error deleting clips");
+            }
+        }
+    }
     void Session::deleteClipAtPosition(std::pair<int, int> clipPosition){
         auto &clip = selectClipByPosition(clipPosition);
         if(clip != midiClipNull){
             try
             {
+                auto currentTrack = selectedTrack();
+                clip->removeOutputNode(currentTrack);
                 auto it = std::find(clips.begin(), clips.end(), clip);
                 clips.erase(it);
             }
@@ -424,4 +462,11 @@ Session::Session(shared_ptr<AudioContext> context,
             }
         }
     }
+    void Session::changeClipPosition(std::pair<int, int> sourcePosition, std::pair<int, int> destinationPosition) {
+        //  TODO: Implement move functionality
+        // Validate sourcePosition is a valid clip.
+        // If a clip exists in destination, delete it. This will overwrite 
+        // Change the clip position on the clip item
+        //Disconnect from previous track
+    };
 }

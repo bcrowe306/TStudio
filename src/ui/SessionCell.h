@@ -10,7 +10,7 @@
 #include <imgui.h>
 #include <memory>
 #include <unordered_map>
-
+#include "ui/Utility.h"
 using std::shared_ptr;
 using namespace tstudio;
 
@@ -29,7 +29,7 @@ void DrawClipStates(ImDrawList *draw_list, shared_ptr<MidiClip> clip, shared_ptr
     switch (clip->getState()) {
     case tstudio::ClipState::LAUNCHING_PLAY:
       draw_list->AddRectFilled(min, ImVec2(min.x + trigger_button_width, max.y),
-                               U32FromHex(LAUNCHING_PLAY_COLOR, .5f), 0.0f);
+                               clipColor, 0.0f);
       draw_list->AddRectFilled(ImVec2(min.x + trigger_button_width, min.y), max,
                                clipColor, 0.0f);
       break;
@@ -130,6 +130,7 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
     session->activatePosition(cellPosition.first, cellPosition.second);
   }
   
+  
   ImVec2 p = ImGui::GetItemRectMin();
   ImVec2 p_max = ImGui::GetItemRectMax();
   ImGui::SameLine();
@@ -138,15 +139,15 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   bool cellClicked = ImGui::InvisibleButton(
       label.c_str(), ImVec2(width - trigger_button_width, height));
   if (ImGui::BeginPopupContextItem()) {
-        ImGui::MenuItem("New");
+        if(ImGui::MenuItem("New")) session->newClip(2);
         ImGui::MenuItem("Copy");
-        ImGui::MenuItem("Delete");
+        if(ImGui::MenuItem("Delete")) session->deleteClipAtPosition(cellPosition);
         ImGui::MenuItem("Duplicate");
     ImGui::EndPopup();
   }
 
   if (cellClicked) {
-    session->selectPosition(cellPosition);
+    // session->selectPosition(cellPosition);
   }
   
   ImVec2 p2 = ImGui::GetItemRectMin();
@@ -249,13 +250,19 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   if (selected) {
     draw_list->AddRect(p, p2_max, U32FromHex(BOOL_ON_COLOR), 0.f, NULL);
   }
-  if(ImGui::IsMouseDoubleClicked(0)){
-    auto cellMin = ImGui::GetItemRectMin();
-    auto cellMax = ImGui::GetItemRectMax();
-    std::cout << cellMin.x << " : " << io.MousePos.x << " : " <<  cellMax.x << std::endl;
-    if(io.MousePos.x > cellMin.x && io.MousePos.x < cellMax.x && io.MousePos.y > cellMin.y && io.MousePos.y < cellMax.y){
-      session->newClip(2);
-    }
+
+  auto cellMin = ImGui::GetItemRectMin();
+  auto cellMax = ImGui::GetItemRectMax();
+
+  if (ImGui::IsMouseClicked(0) && IsMouseHit(cellMin, cellMax, io.MousePos))
+  {
+    session->selectPosition(cellPosition);
+    // session->activatePosition(cellPosition.first, cellPosition.second);
+  }
+
+  if (ImGui::IsMouseDoubleClicked(0) && IsMouseHit(cellMin, cellMax, io.MousePos))
+  {
+    session->newClip(2);
   }
 }
 

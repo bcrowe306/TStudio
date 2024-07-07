@@ -5,7 +5,11 @@
 #include "Colors.h"
 #include "core/TrackNode.h"
 #include "ui/Colors.h"
-
+// TODO: Implement Track Header
+// TODO: Implement Clip Stop Button
+// TODO: Re-arrange track order by drag
+// TODO: Rename track on double click, or right click context menu
+// TODO: Track Color Select on right click, context menu
 bool TrackHeader(
     shared_ptr<tstudio::TrackNode> track, const ImVec2 &size, bool &selected,
     ImU32 activeColor = ImGui::GetColorU32(ImVec4(0.89f, 0.76f, 0.07f, 1.0f)),

@@ -47,7 +47,7 @@ void DrawGrid(ImDrawList *draw_list, ImVec2 origin, ImVec2 size,
                        color);
   }
 }
-
+// TODO: Finish grid functionality. Legend of notes and bars. Different colors for subdivisions. Snapping to grid. Note velocity in events and plot below.
 void DrawGridEvents(ImDrawList *draw_list, std::vector<GridEvent> &events) {
   ImGuiIO &io = ImGui::GetIO();
   for (const auto &event : events) {

@@ -56,39 +56,54 @@ void MidiClip::onLaunchEvent(any data){
 
 void MidiClip::setNextClipState(ClipState next_state)
 {
-  switch (next_state)
-  {
-  case ClipState::STOPPED:
-    if(playhead->launchQuantization == LaunchQuantization::Off){
-      setState(next_state);
-    }else{
-      setState(ClipState::STOPPING);
-      nextState = next_state;
-    }
-    break;
-  case ClipState::RECORDING:
-    if(length == 0){
-      setState(ClipState::LAUNCHING_RECORDING);
-      nextState = ClipState::RECORDING_INITIAL;
-    }else{
-      if(getState() == ClipState::PLAYING){
-        setState(ClipState::RECORDING);
-      }else{
-        setState(ClipState::LAUNCHING_RECORDING);
-        nextState = ClipState::RECORDING;
+  if (next_state != this->state){
+    switch (next_state)
+    {
+    case ClipState::STOPPED:
+      if (playhead->launchQuantization == LaunchQuantization::Off)
+      {
+        setState(next_state);
       }
+      else
+      {
+        setState(ClipState::STOPPING);
+        nextState = next_state;
+      }
+      break;
+    case ClipState::RECORDING:
+      if (length == 0)
+      {
+        setState(ClipState::LAUNCHING_RECORDING);
+        nextState = ClipState::RECORDING_INITIAL;
+      }
+      else
+      {
+        if (getState() == ClipState::PLAYING)
+        {
+          setState(ClipState::RECORDING);
+        }
+        else
+        {
+          setState(ClipState::LAUNCHING_RECORDING);
+          nextState = ClipState::RECORDING;
+        }
+      }
+      break;
+    case ClipState::PLAYING:
+      if (playhead->launchQuantization == LaunchQuantization::Off)
+      {
+        setState(ClipState::PLAYING);
+      }
+      else
+      {
+        setState(ClipState::LAUNCHING_PLAY);
+        nextState = ClipState::PLAYING;
+      }
+    default:
+      break;
     }
-    break;
-  case ClipState::PLAYING:
-    if(playhead->launchQuantization == LaunchQuantization::Off){
-      setState(ClipState::PLAYING);
-    }else{
-      setState(ClipState::LAUNCHING_PLAY);
-      nextState = ClipState::PLAYING;
-    }
-  default:
-    break;
   }
+  
 }
 
 ClipState MidiClip::processClipState(ClipState nextClipState)
