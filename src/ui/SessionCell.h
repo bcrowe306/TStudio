@@ -126,7 +126,6 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   auto triggerButtonClicked = ImGui::InvisibleButton(
       (label + "trigger").c_str(), ImVec2(trigger_button_width, cellSize.y));
   if (triggerButtonClicked) {
-    session->selectClipByPosition(cellPosition);
     session->activatePosition(cellPosition.first, cellPosition.second);
   }
   
@@ -138,10 +137,12 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
   // Clip click
   bool cellClicked = ImGui::InvisibleButton(
       label.c_str(), ImVec2(width - trigger_button_width, height));
+
+  // Context Menu - Right Click
   if (ImGui::BeginPopupContextItem()) {
-        if(ImGui::MenuItem("New")) session->newClip(2);
+        if(ImGui::MenuItem("New")) track->createClip(cellPosition.second, 2);
         ImGui::MenuItem("Copy");
-        if(ImGui::MenuItem("Delete")) session->deleteClipAtPosition(cellPosition);
+        if(ImGui::MenuItem("Delete")) track->deleteClip(cellPosition.second);
         ImGui::MenuItem("Duplicate");
     ImGui::EndPopup();
   }
@@ -262,7 +263,7 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
 
   if (ImGui::IsMouseDoubleClicked(0) && IsMouseHit(cellMin, cellMax, io.MousePos))
   {
-    session->newClip(2);
+    track->createClip(cellPosition.second, 2);
   }
 }
 

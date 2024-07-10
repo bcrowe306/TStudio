@@ -71,7 +71,7 @@ public:
   shared_ptr<AudioBus> rim;
   shared_ptr<SampledAudioNode> metronomeDownBeat;
   function<void(bool)> metronomeCallback;
-  SongPosition songPosition; // TODO: Implement this for song position and in ui
+  SongPosition songPosition;
 
 
   // Contructors

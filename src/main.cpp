@@ -31,6 +31,7 @@
 #include "ui/SessionCell.h"
 #include "ui/GridView.h"
 #include "ui/ClipView.h"
+#include "ui/Toolbar.h"
 #include "ui/Colors.h"
 #include "ui/LayoutDimensions.h"
 #include <imgui.h>
@@ -46,28 +47,6 @@
 #define OUT std::cout
 #define END std::endl
 
-const char s8_zero = 0, s8_one = 1, s8_fifty = 50, s8_min = -128, s8_max = 127;
-const ImU8 u8_zero = 0, u8_one = 1, u8_fifty = 50, u8_min = 0, u8_max = 255;
-const short s16_zero = 0, s16_one = 1, s16_fifty = 50, s16_min = -32768, s16_max = 32767;
-const ImU16 u16_zero = 0, u16_one = 1, u16_fifty = 50, u16_min = 0, u16_max = 65535;
-const ImS32 s32_zero = 0, s32_one = 1, s32_fifty = 50, s32_min = INT_MIN / 2, s32_max = INT_MAX / 2, s32_hi_a = INT_MAX / 2 - 100, s32_hi_b = INT_MAX / 2;
-const ImU32 u32_zero = 0, u32_one = 1, u32_fifty = 50, u32_min = 0, u32_max = UINT_MAX / 2, u32_hi_a = UINT_MAX / 2 - 100, u32_hi_b = UINT_MAX / 2;
-const ImS64 s64_zero = 0, s64_one = 1, s64_fifty = 50, s64_min = LLONG_MIN / 2, s64_max = LLONG_MAX / 2, s64_hi_a = LLONG_MAX / 2 - 100, s64_hi_b = LLONG_MAX / 2;
-const ImU64 u64_zero = 0, u64_one = 1, u64_fifty = 50, u64_min = 0, u64_max = ULLONG_MAX / 2, u64_hi_a = ULLONG_MAX / 2 - 100, u64_hi_b = ULLONG_MAX / 2;
-const float f32_zero = 0.f, f32_one = 1.f, f32_lo_a = -10000000000.0f, f32_hi_a = +10000000000.0f;
-const double f64_zero = 0., f64_one = 1., f64_lo_a = -1000000000000000.0, f64_hi_a = +1000000000000000.0;
-
-// State
-static char s8_v = 127;
-static ImU8 u8_v = 255;
-static short s16_v = 32767;
-static ImU16 u16_v = 65535;
-static ImS32 s32_v = -1;
-static ImU32 u32_v = (ImU32)-1;
-static ImS64 s64_v = -1;
-static ImU64 u64_v = (ImU64)-1;
-static float f32_v = 0.123f;
-static double f64_v = 90000.01234567890123456789;
 
 using namespace tstudio;
 using namespace placeholders;
@@ -102,7 +81,7 @@ void ui(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
     float footer_height = 300.0f;
     float main_width = window_width - sidebar_width;
     float main_height = window_height - footer_height - toolbar_height;
-    ImGui::GetStyle().WindowRounding = 0.1f;
+    ImGui::GetStyle().WindowRounding = 0.0f;
     ImGui::GetStyle().WindowBorderSize = 0.1f;
     ImGui::GetStyle().FrameRounding = 0.0f;
     ImGui::GetStyle().GrabRounding = 0.0f;
@@ -110,139 +89,10 @@ void ui(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
     ImGui::GetStyle().ScrollbarRounding = 0.0f;
 
 
-    // Toolbar Panel
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(window_width, toolbar_height));
-    ImGui::Begin("Toolbar", NULL,
-                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-                     ImGuiWindowFlags_NoCollapse |
-                     ImGuiWindowFlags_NoDecoration);
-    static std::pair<int, int> sessionPosition;
-    auto tempo = playhead->getTempo();
-    ImGui::AlignTextToFramePadding();
-    ImGui::PushItemWidth(100.f);
-    auto tempoText = ImGui::InputScalar("Tempo", ImGuiDataType_Float, &tempo,
-                                        true ? &f32_one : NULL);
-    if (tempoText) {
-      if (tempo > 30 && tempo < 300) {
-        playhead->setTempo(tempo);
-      }
-    }
-    ImGui::SameLine();
-
-    std::string buttonLabel;
-    float playButtonHue = 0.35f;
-    switch (playhead->getState()) {
-    case PlayheadState::RECORDING:
-      buttonLabel = "Recording";
-      playButtonHue = 0.35f;
-      break;
-    case PlayheadState::PRECOUNT:
-      buttonLabel = "Precount";
-      playButtonHue = 0.35f;
-      break;
-    case PlayheadState::PLAYING:
-      buttonLabel = "Record";
-      playButtonHue = 0.35f;
-      break;
-    case PlayheadState::STOPPED:
-      buttonLabel = "Record";
-      playButtonHue = 0.66;
-      break;
-    default:
-      buttonLabel = "Record";
-      playButtonHue = 0.66;
-      break;
-    }
-
-    // Playbutton
-    // ImGui::PushID("playButton");
-    // ImGui::PushStyleColor(ImGuiCol_Button,
-    // (ImVec4)ImColor::HSV(playButtonHue, 0.6f, 0.6f));
-    // ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-    // (ImVec4)ImColor::HSV(playButtonHue / 7.0f, 0.7f, 0.7f));
-    // ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-    // (ImVec4)ImColor::HSV(playButtonHue / 7.0f, 0.8f, 0.8f));
-    auto playButton = ImGui::Button(playhead->isPlaying() ? "Stop" : "Play");
-    ImGui::SameLine();
-    if (playButton) {
-      playhead->togglePlay();
-    }
-    // ImGui::PopID();
-    ImGui::SameLine();
-
-    // RecordButton
-    float buttonHue = playhead->isRecording() ? 0.0f : 0.5f;
-    ImGui::PushID("recordButton");
-    ImGui::PushStyleColor(ImGuiCol_Button,
-                          (ImVec4)ImColor::HSV(buttonHue, 0.6f, 0.6f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                          (ImVec4)ImColor::HSV(buttonHue / 7.0f, 0.7f, 0.7f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-                          (ImVec4)ImColor::HSV(buttonHue / 7.0f, 0.8f, 0.8f));
-
-    auto recordButton = ImGui::Button(buttonLabel.c_str());
-    if (recordButton) {
-      playhead->toggleRecord();
-    }
-    ImGui::PopStyleColor(3);
-    ImGui::PopID();
-
-    ImGui::SameLine();
-    ImGui::PushID("stopButton");
-    auto stopButton = ImGui::Button("Stop");
-    if (stopButton) {
-      playhead->stop();
-    }
-    ImGui::PopID();
-    ImGui::SameLine();
-
-    // addTrackButton
-    ImGui::PushID("addTrackButton");
-    auto addTrackButton = ImGui::Button("Add Track");
-    if (addTrackButton) {
-      session->addTrack();
-    }
-    ImGui::PopID();
-    ImGui::SameLine();
-
-    // addSceneButton
-    ImGui::PushID("addSceneButton");
-    auto addSceneButton = ImGui::Button("Add Scene");
-    if (addSceneButton) {
-      session->addScene();
-    }
-    ImGui::PopID();
-
-    ImGui::SameLine();
-    // Metronome
-    static bool check = playhead->getMetronomeEnabled();
-    auto metronomeCheckbox = ImGui::Checkbox("Metronome", &check);
-    ImGui::SameLine();
-    if (metronomeCheckbox) {
-      playhead->toggleMetronomeEnabled();
-    }
-
-    // positionText
-    ImGui::PushID("positionText");
-    auto positionString = (std::to_string(sessionPosition.first) + " : " +
-                           std::to_string(sessionPosition.second))
-                              .c_str();
-    ImGui::Text(positionString);
-    ImGui::PopID();
-    ImGui::End();
-    auto sidebarPosition = ImVec2(0, toolbar_height);
-    auto sidebarSize = ImVec2(sidebar_width, main_height);
-    Sidebar(session, playhead, sidebarPosition, sidebarSize);
-
-    
-    auto footerPanelPosition = ImVec2(0, toolbar_height + main_height);
-    auto footerPanelSize = ImVec2(window_width, footer_height);
-    FooterPanel(session, playhead, footerPanelPosition, footerPanelSize);
-
-    auto mainViewPosition = ImVec2(sidebar_width, toolbar_height);
-    auto mainViewSize = ImVec2(main_width, main_height);
-    MainView(session, playhead, mainViewPosition, mainViewSize);
+    Toolbar(session, playhead, ImVec2(0,0), ImVec2(window_width, toolbar_height));
+    Sidebar(session, playhead, ImVec2(0, toolbar_height), ImVec2(sidebar_width, main_height));
+    FooterPanel(session, playhead, ImVec2(0, toolbar_height + main_height), ImVec2(window_width, footer_height));
+    MainView(session, playhead, ImVec2(sidebar_width, toolbar_height), ImVec2(main_width, main_height));
     
   };
   std::cout << "uiThread\n";
@@ -269,16 +119,6 @@ int main(int, char **)
     auto session = make_shared<Session>(context, playHead);
     context->connect(context->destinationNode(), session->output);
     context->synchronizeConnections();
-
-    // namespace fs = std::filesystem;
-    // auto HOME = (std::string)getenv("HOME");
-    // fs::path fileDir = HOME + "/Documents";
-    // std::vector<filesystem::directory_entry> dir;
-    // ScrollView sv(dir);
-
-    // for (auto &entry : fs::directory_iterator(fileDir)) {
-    //   dir.emplace_back(entry);
-    // }
 
     auto filter = MidiMsgFilter{"MPK mini 3", 0};
     mer.subscribe(filter, [&](MidiMsg &event) {

@@ -23,7 +23,7 @@ namespace tstudio {
   class MidiEventRegistry
   {
   public:
-    using HandlerId = std::size_t;
+    using HandlerId = int;
 
     // Singleton instance accessor
     static MidiEventRegistry &getInstance()
@@ -32,27 +32,23 @@ namespace tstudio {
       return instance;
     }
 
-    HandlerId subscribe(MidiMsgFilter &filter, const std::function<void(MidiMsg &)> &handler)
+    int subscribe(MidiMsgFilter &filter, const std::function<void(MidiMsg &)> &handler)
     {
-      listeners.emplace_back(MidiListener{handler, filter});
+      auto newHandlerId = nextHandlerId++;
+      auto result = handlers[newHandlerId] =  MidiListener{handler, filter};
+      return newHandlerId;
     }
 
     // Unsubscribe from an event with a specific event ID
-    void unsubscribe(const std::function<void(MidiMsg &)> &handler)
+    void unsubscribe(int handlerId)
     {
-      auto removal = std::remove_if(listeners.begin(), listeners.end(),
-                                    [&handler](const MidiListener &midiListener)
-                                    {
-                                      return handler.target<void(MidiMsg &)>() == midiListener.handler.target<void(MidiMsg &)>();
-                                    });
-
-      listeners.erase(removal, listeners.end());
+      auto results = handlers.erase(handlerId);
     }
 
     // Notify all subscribers of a specific event with data
     void notify(const std::string &event_id, MidiMsg &midiMsg)
     {
-      for (const auto &midiListener : listeners)
+      for (const auto &[handlerId, midiListener] : handlers)
       {
         auto filter = midiListener.filter;
         auto handler = midiListener.handler;
@@ -64,10 +60,10 @@ namespace tstudio {
     }
 
   private:
-    std::unordered_map<std::string, std::vector<std::pair<HandlerId, std::function<void(MidiMsg &)>>>> handlers;
     std::mutex mtx;
     vector<MidiListener> listeners;
-    std::atomic<HandlerId> nextHandlerId{0};
+    unordered_map<int, MidiListener> handlers;
+    int nextHandlerId =0 ;
 
     // Private constructor to prevent instantiation
     MidiEventRegistry() {}

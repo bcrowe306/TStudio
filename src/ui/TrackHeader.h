@@ -5,16 +5,18 @@
 #include "Colors.h"
 #include "core/TrackNode.h"
 #include "ui/Colors.h"
-// TODO: Implement Track Header
+#include "ui/Utility.h"
 // TODO: Implement Clip Stop Button
 // TODO: Re-arrange track order by drag
 // TODO: Rename track on double click, or right click context menu
 // TODO: Track Color Select on right click, context menu
 bool TrackHeader(
+    shared_ptr<tstudio::Session> session,
     shared_ptr<tstudio::TrackNode> track, const ImVec2 &size, bool &selected,
     ImU32 activeColor = ImGui::GetColorU32(ImVec4(0.89f, 0.76f, 0.07f, 1.0f)),
     ImU32 defaultColor = ImGui::GetColorU32(ImVec4(0.113f, 0.113f, 0.113f,
-                                                   1.0f))) {
+                                                   1.0f)))
+{
   ImGuiIO &io = ImGui::GetIO();
   ImDrawList *draw_list = ImGui::GetWindowDrawList();
     auto label = track->name.value.c_str();
@@ -37,6 +39,7 @@ bool TrackHeader(
                              0.0f); // 4.0f is the rounding radius
     float left_padding = 10.f;
     float trigger_element_size = 10.f;
+
     // Draw stop element
     auto start_y = p.y + (size.y / 2 - trigger_element_size / 2);
     auto trigger_start = ImVec2(p.x + left_padding, start_y);
@@ -51,6 +54,21 @@ bool TrackHeader(
     draw_list->AddText(text_pos, text_color, label);
 
     ImGui::PopID();
+    auto contextLabel = track->name.value + "Context";
+    if (ImGui::BeginPopupContextItem(contextLabel.c_str()))
+    {
+      if (ImGui::MenuItem("Delete Track"))
+        session->deleteTrack(track);
+      ImGui::MenuItem("Copy");
+      if (ImGui::MenuItem("Add Scene"))
+        session->addScene();
+      ImGui::MenuItem("Duplicate");
+      ImGui::EndPopup();
+    }
+    if (ImGui::IsMouseClicked(1) && IsMouseHit(p, p_max, io.MousePos))
+    {
+      ImGui::OpenPopup(contextLabel.c_str());
+    }
     return clicked;
 };
 #endif // !TRACKHEADER_H

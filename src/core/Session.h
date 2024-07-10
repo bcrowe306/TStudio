@@ -56,7 +56,7 @@ using MidiClipType = shared_ptr<MidiClip>;
         shared_ptr<Playhead> playhead;
         vector<shared_ptr<TrackNode>> tracks;
         vector<Scene> scenes;
-        vector<MidiClipType> clips;
+        vector<shared_ptr<MidiClip>> clips;
         shared_ptr<AnalyserNode> output;
         shared_ptr<Browser> browser;
 
@@ -67,6 +67,9 @@ using MidiClipType = shared_ptr<MidiClip>;
 
         // Deletes a track by track index. All clips that belong to this track will be deleted.
         void deleteTrack(int);
+
+        // Deletes a track by track shared_ptr. All clips that belong to this track will be deleted.
+        void deleteTrack(shared_ptr<TrackNode> track);
 
         // Deletes a track from the session
         void deleteTrack();
@@ -144,13 +147,13 @@ using MidiClipType = shared_ptr<MidiClip>;
         void deleteClipAtIndex(int);
 
         // Select clip by the clip index. This index is the index of the clips vector
-        MidiClipType& selectClipByIndex(int);
+        MidiClipType selectClipByIndex(int);
 
         // Gets the clip at the provided position std::pair<int trackIndex, int sceneIndex>. Return nullptr if no clip is found.
-        MidiClipType& selectClipByPosition(std::pair<int, int> clipPosition);
+        MidiClipType selectClipByPosition(std::pair<int, int> clipPosition);
 
         // Gets the clip at the provided position using int trackIndex, int sceneIndex
-        MidiClipType& selectClipByPosition(int trackIndex, int sceneIndex);
+        MidiClipType selectClipByPosition(int trackIndex, int sceneIndex);
 
         // Returns bool if the current clip position is selected, uses position
         bool isClipSelected(std::pair<int, int>);
@@ -160,19 +163,19 @@ using MidiClipType = shared_ptr<MidiClip>;
 
         // Gets the clip at the current track and scene index.
         // If no clip is present, returns nullptr.
-        MidiClipType& selectedClip();
+        MidiClipType selectedClip();
 
         // Moves the clip to a new position in the grid. Will change track callbacks if necessary
         void changeClipPosition(std::pair<int, int> currentPosition, std::pair<int, int> newPosition);
 
         // Activates the clip at sceneIndex. This stops all other clips in the track.
-        void activateClip(MidiClipType&, ClipState);
     private:
 
         // Members
         int m_selectedTrackIndex; 
         int m_selectedSceneIndex; 
         int m_selectedClipIndex; 
+        int trackCounter = 0;
         MidiClipType midiClipNull = MidiClipType(nullptr);
         // Methods
         void precountState();

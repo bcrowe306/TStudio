@@ -86,20 +86,26 @@ void Playhead::notifyTick(){
 };
 
 void Playhead::setState(PlayheadState state) {
+
   if (state == PlayheadState::RECORDING && preCountBars.get() > 0) {
-    if (_previous_state == PlayheadState::PRECOUNT) {
-      state = PlayheadState::RECORDING;
-    } else if (_previous_state == PlayheadState::PLAYING) {
-      state = PlayheadState::RECORDING;
-    } else {
+    if (_state == PlayheadState::STOPPED)
+    {
       state = PlayheadState::PRECOUNT;
     }
+    else
+    {
+      state = PlayheadState::RECORDING;
+    }
   }
-  _state = state;
-  _previous_state = state;
-  eventRegistry.notify("playhead.state", _state);
-  auto message = "Playhead: " + PlayheadStateMap[_state] + "\n";
-  LOG_TRACE(message.c_str());
+  // Only change the state if a change is needed
+  if(state != _state){
+    _state = state;
+    _previous_state = state;
+    eventRegistry.notify("playhead.state", _state);
+    auto message = "Playhead: " + PlayheadStateMap[_state] + "\n";
+    LOG_TRACE(message.c_str());
+  }
+  
 }
 void Playhead::play() { setState(PlayheadState::PLAYING); }
 
@@ -122,11 +128,7 @@ void Playhead::toggleRecord() {
 void Playhead::stop() { setState(PlayheadState::STOPPED); }
 
 void Playhead::record() {
-  if (preCountBars.get() > 0 and _state != PlayheadState::PLAYING) {
-    setState(PlayheadState::PRECOUNT);
-  } else {
-    setState(PlayheadState::RECORDING);
-  }
+  setState(PlayheadState::RECORDING);
 }
 
 bool Playhead::isPlaying() const {
@@ -164,11 +166,11 @@ void Playhead::handleTick() {
       playheadTick.precountTick = 0;
     } else {
       notifyTick();
-      // eventRegistry.notify("playhead.precount_tick", playheadTick.precountTick); TODO: Deprecated
       _generateMetronomeBeats(playheadTick.precountTick);
       playheadTick.precountTick++;
     }
     playheadTick.tickCount = 0;
+    songPosition.setFromTick(playheadTick.tickCount);
   } else if (_state == PlayheadState::PLAYING ||_state == PlayheadState::RECORDING) {
 
     // No longer in precount, set tick to 0 and precount bool to false
@@ -183,16 +185,18 @@ void Playhead::handleTick() {
     _generateMetronomeBeats(playheadTick.tickCount);
 
     notifyTick();
-    // eventRegistry.notify("playhead.tick", ticks); TODO: Depracated
     last_play_position_tick = playheadTick.tickCount;
     playheadTick.tickCount++;
+    songPosition.setFromTick(playheadTick.tickCount);
   } else if (_state == PlayheadState::STOPPED) {
     if (stop_mode == StopMode::RETURN_TO_ZERO) {
       playheadTick.sampleCount = 0;
       playheadTick.tickCount = 0;
+      songPosition.setFromTick(playheadTick.tickCount);
     } else if (stop_mode == StopMode::RETURN_TO_PLAY) {
       playheadTick.sampleCount = last_play_position_sample;
       playheadTick.tickCount = last_play_position_tick;
+      songPosition.setFromTick(playheadTick.tickCount);
     }
   }
 }
@@ -226,9 +230,11 @@ void Playhead::callback(ContextRenderLock &r, FunctionNode *me, int channel,
       if (phn->stop_mode == StopMode::RETURN_TO_ZERO) {
         phn->playheadTick.sampleCount = 0;
         phn->playheadTick.tickCount = 0;
+        phn->songPosition.setFromTick(phn->playheadTick.tickCount);
       } else if (phn->stop_mode == StopMode::RETURN_TO_PLAY) {
         phn->playheadTick.sampleCount = phn->last_play_position_sample;
         phn->playheadTick.tickCount = phn->last_play_position_tick;
+        phn->songPosition.setFromTick(phn->playheadTick.tickCount);
       }
       phn->playheadTick.precountTick = 0;
     }

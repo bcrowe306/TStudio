@@ -50,10 +50,10 @@ Session::Session(shared_ptr<AudioContext> context,
     }
 
     shared_ptr<TrackNode> Session::addTrack(){
-        auto trackIndex = (int)tracks.size();
-        auto newTrackNumber = std::to_string(tracks.size() + 1);
+        trackCounter++;
+        auto newTrackNumber = std::to_string(trackCounter);
         auto colorIndex = rand() % (int)COLOR_MAP.size();
-        auto newTrack = make_shared<TrackNode>(context);
+        auto newTrack = make_shared<TrackNode>(context, playhead);
         newTrack->color.set(COLOR_MAP[colorIndex]);
         newTrack->name.set(newTrackNumber + " Ins Track");
         tracks.emplace_back(newTrack);
@@ -69,23 +69,39 @@ Session::Session(shared_ptr<AudioContext> context,
 
         return newTrack;
     }
+
     void Session::deleteTrack(int trackIndex){
         auto track = getTrackByIndex(trackIndex);
+        deleteTrack(track);
+    };
+
+    void Session::deleteTrack(shared_ptr<TrackNode> track){
         if(track != nullptr){
             // Remove clips from the track
-            auto clips = getClipsInTrack(trackIndex);
-            for (auto clip : clips)
-            {
-                deleteClip(clip);
+            // auto it = std::find(tracks.begin(), tracks.end(), track);
+            auto it = std::find_if(tracks.begin(), tracks.end(),[&track](shared_ptr<TrackNode> &t){
+                return t->id == track->id;
+            });
+            auto trackIndex = it - tracks.begin();
+            if(tracks.size() > 1){
+                selectTrack(trackIndex -1);
+
+                // Delete all clips in the track
+                for (auto &[sceneIndex, clip] : track->clips)
+                {
+                    track->deleteClip(sceneIndex);
+                }
+
+                // Remove track from audio graph context and sync
+                context->disconnect(output, track->output);
+                context->synchronizeConnections();
+
+                // Remove track from tracks vector
+                tracks.erase(it);
             }
             
-            // Remove track from audio graph context and sync
-            context->disconnect(output, track->output);
-            context->synchronizeConnections();
-
-            // Remove track from tracks vector
-            auto it = std::find(tracks.begin(), tracks.end(), track);
-            tracks.erase(it);
+            
+            
         }
        
     };
@@ -148,52 +164,31 @@ Session::Session(shared_ptr<AudioContext> context,
     };
 
     Scene Session::selectScene(int index) {
-        Scene scene;
-        try
-        {
-            scene = scenes.at(index);
-        }
-        catch(const std::exception& e)
-        {
+        if(index >= scenes.size() || index < 0){
             m_selectedSceneIndex = 0;
-            return scene;
+        }else{
+            m_selectedSceneIndex = index;
         }
-        m_selectedSceneIndex = index;
         eventRegistry.notify("session.scene_selected", m_selectedSceneIndex);
         return scenes[m_selectedSceneIndex];
     };
 
     void Session::activatePosition(int trackIndex, int sceneIndex) {
         selectPosition(trackIndex, sceneIndex); 
-        auto &clip = selectedClip();
+        auto track = selectTrack(trackIndex);
+        auto clip = track->selectClip(sceneIndex);
 
         if (clip == midiClipNull)
         {
-
-            auto nClip = addClip();
-            activateClip(nClip, ClipState::RECORDING);
+            
+            track->createClip(sceneIndex);
+            track->activateClip(sceneIndex, ClipState::RECORDING);
             playhead->record();
         }
         else
         {
-            switch (clip->getState())
-            {
-            case ClipState::PLAYING:
-                activateClip(clip, ClipState::PLAYING);
-                break;
-            case ClipState::RECORDING:
-                activateClip(clip, ClipState::PLAYING);
-                break;
-            case ClipState::RECORDING_INITIAL:
-                activateClip(clip, ClipState::PLAYING);
-                break;
-            case ClipState::STOPPED:
-                activateClip(clip, ClipState::PLAYING);
-                break;
-            
-            default:
-                break;
-            }
+            std::cout << "Here\n";
+            track->activateClip(sceneIndex, ClipState::PLAYING);
             playhead->play();
         }
     };
@@ -250,7 +245,7 @@ Session::Session(shared_ptr<AudioContext> context,
     }
     
     void Session::deleteClip(){
-        auto &clip = selectedClip();
+        auto clip = selectedClip();
         if(clip != nullptr){
             try
             {
@@ -281,20 +276,9 @@ Session::Session(shared_ptr<AudioContext> context,
         }
     }
     void Session::deleteClipAtPosition(std::pair<int, int> clipPosition){
-        auto &clip = selectClipByPosition(clipPosition);
-        if(clip != midiClipNull){
-            try
-            {
-                auto currentTrack = selectedTrack();
-                clip->removeOutputNode(currentTrack);
-                auto it = std::find(clips.begin(), clips.end(), clip);
-                clips.erase(it);
-            }
-            catch (const std::exception&)
-            {
-                LOG_ERROR("No Clips selected");
-            }
-        }
+        auto clip = selectClipByPosition(clipPosition);
+        auto track = selectTrack(clipPosition.first);
+        track->deleteClip(clipPosition.second);
     }
     void Session::deleteClipAtIndex(int index){
         try
@@ -311,61 +295,73 @@ Session::Session(shared_ptr<AudioContext> context,
     }
     void Session::playingState()
     {
-        for(auto &clip : clips){
-            auto state = clip->getState();
-            std::cout << "setting clips states to playing\n" << ClipStateMap[state] << std::endl;
+        for(auto &track: tracks){
+            for (auto &[sceneIndex, clip] : track->clips)
+            {
+                auto state = clip->getState();
+                std::cout << "setting clips states to playing\n"
+                          << ClipStateMap[state] << std::endl;
 
-            // If the clips are in a recording state
-            if(state == ClipState::RECORDING || state == ClipState::RECORDING_INITIAL){
-                activateClip(clip, ClipState::PLAYING);
+                // If the clips are in a recording state
+                if (state == ClipState::RECORDING || state == ClipState::RECORDING_INITIAL)
+                {
+                    track->activateClip(sceneIndex, ClipState::PLAYING);
+                }
+            }
+        }
+        
+    }
+    
+
+    void Session::precountState()
+    {
+        auto track = selectedTrack();
+        auto sceneIndex = selectedSceneIndex();
+        if (track != nullptr && track->arm.get())
+        {
+            auto clip = track->selectClip(sceneIndex);
+            if (clip == midiClipNull)
+            {
+                track->createClip(selectedSceneIndex());
+                track->activateClip(sceneIndex, ClipState::RECORDING);
+            }
+            else
+            {
+                track->activateClip(sceneIndex, ClipState::RECORDING);
             }
         }
     }
     void Session::recordingState()
     {
-        if (selectedTrack()->arm.get())
+        auto track = selectedTrack();
+        auto sceneIndex = selectedSceneIndex();
+        if (track != nullptr && track->arm.get())
         {
-            auto &clip = selectedClip();
-            if (clip == midiClipNull){
-              auto nClip = addClip();
-              activateClip(nClip, ClipState::RECORDING);
-            }else{
-                activateClip(clip, ClipState::RECORDING);
-            }
-        }
-    }
-
-    void Session::precountState()
-    {
-        // Create a new clip and start recording if track is armed:
-        if(selectedTrack()->arm.get()){
-            auto &clip = selectedClip();
+            auto clip = track->selectClip(sceneIndex);
             if (clip == midiClipNull)
             {
-                auto nClip = addClip();
-                activateClip(nClip, ClipState::RECORDING);
-            }else{
-                activateClip(clip, ClipState::RECORDING);
+                track->createClip(selectedSceneIndex());
+                track->activateClip(sceneIndex, ClipState::RECORDING);
             }
-
+            else
+            {
+                track->activateClip(sceneIndex, ClipState::RECORDING);
+            }
         }
     }
 
     shared_ptr<TrackNode> Session::selectTrack(int index){
-        auto track = tracks[index];
-
-        if(track == nullptr){
+        shared_ptr<TrackNode> track;
+        if(index >= tracks.size() || index < 0){
             m_selectedTrackIndex = 0;
-            track = tracks[m_selectedTrackIndex];
         }else{
             m_selectedTrackIndex = index;
-            for (auto t : tracks) {
-              (t->id == track->id) ? t->arm.set(true) : t->arm.set(false);
-                
-            }
         }
+        track = tracks[m_selectedTrackIndex];
 
-        
+        for (auto t : tracks) {
+            (t->id == track->id) ? t->arm.set(true) : t->arm.set(false);
+        }
         return track;
     };
     shared_ptr<TrackNode> Session::getTrackByIndex(int index)
@@ -377,7 +373,7 @@ Session::Session(shared_ptr<AudioContext> context,
         return tracks[m_selectedTrackIndex];
     };
 
-    MidiClipType& Session::selectClipByIndex(int index) {
+    MidiClipType  Session::selectClipByIndex(int index) {
         auto &clip = clips[index];
         if(clip != nullptr){
             m_selectedClipIndex = index;
@@ -387,36 +383,25 @@ Session::Session(shared_ptr<AudioContext> context,
         }
     };
 
-    MidiClipType& Session::selectedClip(){
-      for (auto &c : clips) {
-        auto clipPosition = c->getPosition();
-        if (clipPosition.first == m_selectedTrackIndex &&
-            clipPosition.second == m_selectedSceneIndex) {
-          return c;
+    MidiClipType Session::selectedClip(){
+        auto track = selectedTrack();
+        if(track != nullptr){
+            return track->selectClip(m_selectedSceneIndex);
+
+        }else{
+
         }
-      }
-      return midiClipNull;
-    };
-    MidiClipType& Session::selectClipByPosition(std::pair<int, int> clipPosition) {
-      for (auto &c : clips) {
-        if (c->getPosition() == clipPosition) {
-          return c;
-        }
-      }
-      return midiClipNull;
     };
 
-    MidiClipType &Session::selectClipByPosition(int trackIndex, int sceneIndex)
+    MidiClipType Session::selectClipByPosition(std::pair<int, int> clipPosition) {
+        auto track = selectTrack(clipPosition.first);
+        return track->selectClip(clipPosition.second);
+    };
+
+    MidiClipType Session::selectClipByPosition(int trackIndex, int sceneIndex)
     {
-        for (auto &c : clips)
-        {
-            auto cPos = c->getPosition();
-            if (cPos.first == trackIndex && cPos.second == sceneIndex)
-            {
-                return c;
-            }
-        }
-        return midiClipNull;
+        auto track = selectTrack(trackIndex);
+        return track->selectClip(sceneIndex);
     };
 
     bool Session::isClipSelected(std::pair<int, int> clipPosition) {
@@ -446,21 +431,6 @@ Session::Session(shared_ptr<AudioContext> context,
             }
         });
         return clipsInScene;
-    }
-    void Session::activateClip(MidiClipType &activeClip, ClipState state)
-    {
-        auto activePosition = activeClip->getPosition();
-        for(auto &clip: clips){
-            auto cPos = clip->getPosition();
-            // Only get clips is the track specified by activePosition
-            if(cPos.first == activePosition.first){
-                if(cPos.second != activePosition.second){
-                    clip->setNextClipState(ClipState::STOPPED);
-                }else{
-                    clip->setNextClipState(state);
-                }
-            }
-        }
     }
     void Session::changeClipPosition(std::pair<int, int> sourcePosition, std::pair<int, int> destinationPosition) {
         //  TODO: Implement move functionality

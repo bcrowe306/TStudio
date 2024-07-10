@@ -73,9 +73,9 @@ namespace tstudio {
   public:
 
     // Contructors
-    MidiClip(shared_ptr<Playhead> playhead, const string &, int length_in_bars=0,
+    MidiClip(shared_ptr<Playhead> playhead, string name, int length_in_bars=0,
              ClipState state = ClipState::STOPPED);
-    MidiClip(shared_ptr<Playhead> playhead, const string &, int trackIndex, int sceneIndex, int length_in_bars=0,
+    MidiClip(shared_ptr<Playhead> playhead, string name, int trackIndex, int sceneIndex, int length_in_bars=0,
              ClipState state = ClipState::STOPPED);
     ~MidiClip();
     // Members
@@ -129,7 +129,6 @@ namespace tstudio {
     ClipState state = ClipState::STOPPED;
     ClipState nextState;
     int counter = 0;
-    int length_in_bars;
     bool looping = true;
     int precounter = 0;
     shared_ptr<Playhead> playhead;
@@ -160,7 +159,7 @@ namespace tstudio {
     };
 
     // Methods
-    void quantizeClipLength(ClipState );
+    void quantizeClipLength();
     void init(int);
     
     void onLaunchEvent(any);

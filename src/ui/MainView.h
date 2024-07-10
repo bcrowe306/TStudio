@@ -37,7 +37,7 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
     if (track != nullptr) {
       bool selected = session->selectedTrackIndex() == trackIndex;
       auto trackHeaderWidget =
-          TrackHeader(track, ImVec2(width, 25.f), selected);
+          TrackHeader(session, track, ImVec2(width, 25.f), selected);
       if (trackHeaderWidget) {
         session->selectTrack(trackIndex);
       }
@@ -52,8 +52,8 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
   for (int y = 0; y < session->scenes.size(); y++) {
     for (int x = 0; x < session->tracks.size(); x++) {
 
-      auto clip = session->selectClipByPosition(x, y);
       auto track = session->getTrackByIndex(x);
+      auto clip = track->selectClip(y);
       SessionCell(std::pair<int, int>{x, y}, session, playhead, track, clip,
                   width);
       ImGui::SameLine();
