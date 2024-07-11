@@ -6,8 +6,6 @@
 #include "core/TrackNode.h"
 #include "ui/Colors.h"
 #include "ui/Utility.h"
-// TODO: Implement Clip Stop Button
-// TODO: Re-arrange track order by drag
 // TODO: Rename track on double click, or right click context menu
 // TODO: Track Color Select on right click, context menu
 bool TrackHeader(
@@ -47,6 +45,7 @@ bool TrackHeader(
                               trigger_start.y + trigger_element_size);
     draw_list->AddRectFilled(trigger_start, trigger_end, trackColor, 0.f);
 
+
     // Draw text on top of the rectangle
     ImVec2 text_size = ImGui::CalcTextSize(label);
     ImVec2 text_pos = ImVec2(p.x + (size.x - text_size.x) * 0.5f,
@@ -69,6 +68,12 @@ bool TrackHeader(
     if (ImGui::IsMouseClicked(1) && IsMouseHit(p, p_max, io.MousePos))
     {
       ImGui::OpenPopup(contextLabel.c_str());
+    }
+    if (ImGui::IsMouseClicked(0) && IsMouseHit(trigger_start, trigger_end, io.MousePos))
+    {
+      if(track != nullptr){
+        track->stopAllClips();
+      }
     }
     return clicked;
 };

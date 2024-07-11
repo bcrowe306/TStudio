@@ -21,7 +21,7 @@ void FooterPanel(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playh
       ImGui::Text("This is the Device tab.");
       ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem("Clip", NULL, ImGuiTabItemFlags_SetSelected)) {
+    if (ImGui::BeginTabItem("Clip", NULL)) {
       ClipView(session, playhead);
       ImGui::EndTabItem();
     }

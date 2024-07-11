@@ -38,6 +38,7 @@ namespace tstudio {
     this->addOutputNode(instrument);
     this->context->connect(output, this->instrument->output);
   }
+
   void TrackNode::onMidiMsg(MidiMsg &msg) {
     this->pushIn(msg);
     if (arm.get()) {
@@ -116,4 +117,10 @@ namespace tstudio {
       }
     }
   }
+  void TrackNode::stopAllClips(){
+    for (auto &[index, clip] : this->clips)
+    {
+        clip->setNextClipState(ClipState::STOPPED);
+    }
+  };
 }; // namespace tstudio

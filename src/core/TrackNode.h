@@ -70,6 +70,9 @@ namespace tstudio {
         // Activates the clip at the specified sceneIndex
         void activateClip(int sceneIndex, ClipState state);
 
+        // Stop all clips. Sets all clips state in the track to ClipState::STOPPED
+        void stopAllClips();
+
         void set_midi_device(std::string);
         void set_midi_channel(uint8_t);
         void set_instrument(shared_ptr<InstrumentDevice>);
