@@ -143,7 +143,7 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
         if(ImGui::MenuItem("New")) track->createClip(cellPosition.second, 2);
         ImGui::MenuItem("Copy");
         if(ImGui::MenuItem("Delete")) track->deleteClip(cellPosition.second);
-        ImGui::MenuItem("Duplicate");
+        if(ImGui::MenuItem("Duplicate") ) session->duplicateClip(cellPosition);
     ImGui::EndPopup();
   }
 
@@ -249,7 +249,7 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
 
   // Draw selected border
   if (selected) {
-    draw_list->AddRect(p, p2_max, U32FromHex(BOOL_ON_COLOR), 0.f, NULL);
+    draw_list->AddRect(ImVec2(p.x +1, p.y+1), p2_max, U32FromHex(BOOL_ON_COLOR), 0.f, NULL);
   }
 
   auto cellMin = ImGui::GetItemRectMin();

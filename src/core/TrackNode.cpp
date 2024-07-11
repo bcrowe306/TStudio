@@ -87,6 +87,25 @@ namespace tstudio {
       clips.erase(sceneIndex);
     }
   }
+
+  bool TrackNode::duplicateClip(int oldSceneIndex, int newSceneIndex){
+    auto oldClip = selectClip(oldSceneIndex);
+    if (oldClip != shared_ptr<MidiClip>(nullptr))
+    {
+      auto newClip =createClip(newSceneIndex);
+      newClip->data = oldClip->data;
+      newClip->note_map = oldClip->note_map;
+      newClip->setLength(oldClip->getLength());
+      newClip->setLoopStatus(oldClip->getLoopStatus());
+      newClip->color.set(oldClip->color.value);
+      newClip->name.set(oldClip->name.value);
+      activateClip(newSceneIndex, ClipState::PLAYING);
+      return true;
+    }else{
+      return false;
+    }
+  };
+
   void TrackNode::activateClip(int sceneIndex, ClipState state)
   {
     for(auto &[index, clip] : this->clips){

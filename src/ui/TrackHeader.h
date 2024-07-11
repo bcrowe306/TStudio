@@ -19,7 +19,7 @@ bool TrackHeader(
 {
   ImGuiIO &io = ImGui::GetIO();
   ImDrawList *draw_list = ImGui::GetWindowDrawList();
-    auto label = track->name.value.c_str();
+  auto label = track->name.value.c_str();
   ImGui::PushID(label); // Ensure unique ID for each widget
   ImGui::InvisibleButton(label, size);
   bool hovered = ImGui::IsItemHovered();
@@ -65,6 +65,7 @@ bool TrackHeader(
       ImGui::MenuItem("Duplicate");
       ImGui::EndPopup();
     }
+   
     if (ImGui::IsMouseClicked(1) && IsMouseHit(p, p_max, io.MousePos))
     {
       ImGui::OpenPopup(contextLabel.c_str());

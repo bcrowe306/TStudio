@@ -12,6 +12,7 @@
 #include <optional>
 #include <utility>
 #include <functional>
+#include "library/Utility.h"
 
 using namespace placeholders;
 namespace tstudio {
@@ -369,6 +370,21 @@ Session::Session(shared_ptr<AudioContext> context,
         return tracks[index];
     };
 
+    void Session::reorderTrack(int oldIndex, int newIndex)
+    {
+        // If old and new are the same, do nothing.
+        if(oldIndex != newIndex){
+            // Check index is in vector bounds before reorder. Fail silently if out of vector bounds.
+            if(oldIndex >=0 && oldIndex < tracks.size() && newIndex >=0 && newIndex < tracks.size()){
+                printf("Reorder: old: %d, new: %d \n", oldIndex, newIndex);
+                std::lock_guard<std::mutex> lg(mtx);
+                reorder_vector(this->tracks, oldIndex, newIndex);
+                selectTrack(newIndex);
+            }
+
+        }
+    };
+
     shared_ptr<TrackNode> Session::selectedTrack(){
         return tracks[m_selectedTrackIndex];
     };
@@ -396,6 +412,25 @@ Session::Session(shared_ptr<AudioContext> context,
     MidiClipType Session::selectClipByPosition(std::pair<int, int> clipPosition) {
         auto track = selectTrack(clipPosition.first);
         return track->selectClip(clipPosition.second);
+    };
+
+    void Session::duplicateClip(std::pair<int, int> clipPosition){
+        return duplicateClip(clipPosition.first, clipPosition.second);
+    };
+
+    void Session::duplicateClip(int trackIndex, int sceneIndex)
+    {
+        int newSceneIndex = sceneIndex + 1;
+        if (newSceneIndex >= scenes.size())
+        {
+            addScene();
+        }
+        auto track = tracks[trackIndex];
+        if(track != nullptr){
+            if (track->duplicateClip(sceneIndex, newSceneIndex)){
+                selectScene(newSceneIndex);
+            }
+        }
     };
 
     MidiClipType Session::selectClipByPosition(int trackIndex, int sceneIndex)

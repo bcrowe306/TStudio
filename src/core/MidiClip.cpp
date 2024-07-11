@@ -206,17 +206,17 @@ void MidiClip::clipStoppedState() { counter = 0; }
 void MidiClip::onPlayheadStateChange(any data) {
   auto state = std::any_cast<PlayheadState>(data);
   auto currentClipState = getState();
-  // if (playhead->getState() == PlayheadState::STOPPED) {
-  //   if (currentClipState == ClipState::RECORDING_INITIAL){
-  //     setState(ClipState::PLAYING);
-  //   }
-  //   counter = 0;
-  // }
-  // else if(state == PlayheadState::PLAYING){
-  //   if (currentClipState == ClipState::RECORDING || currentClipState == ClipState::RECORDING_INITIAL){
-  //     setNextClipState(ClipState::PLAYING);
-  //   }
-  // }
+  if (playhead->getState() == PlayheadState::STOPPED) {
+    if (currentClipState == ClipState::RECORDING_INITIAL){
+      setState(ClipState::PLAYING);
+    }
+    counter = 0;
+  }
+  else if(state == PlayheadState::PLAYING){
+    if (currentClipState == ClipState::RECORDING || currentClipState == ClipState::RECORDING_INITIAL){
+      setNextClipState(ClipState::PLAYING);
+    }
+  }
 }
 
 void MidiClip::incTickCounter(PlayheadTick &playheadTick) {

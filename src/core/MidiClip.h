@@ -84,6 +84,7 @@ namespace tstudio {
     unordered_map<int, ClipEvent> note_map;
     SongPosition songPosition;
     StringParam color = StringParam("color", "Color", "", "Text");
+    
     // Methods
     bool receive(MidiMsg &) override;
     void clipPlayingState();

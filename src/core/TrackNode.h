@@ -57,9 +57,15 @@ namespace tstudio {
         // Creates a new clip in the specified scene index with option length set in bars.
         shared_ptr<MidiClip> createClip(int sceneIndex, int lengthInBars = 0);
 
+        
+
         // Returns a clip by at the sceneIndex. If scneneIndex has no clip, will return nullptr
         shared_ptr<MidiClip> selectClip(int sceneIndex);
+
+        // Deletes a clip by scene index
         void deleteClip(int sceneIndex);
+
+        bool duplicateClip(int oldSceneIndex, int newSceneIndex);
 
         // Activates the clip at the specified sceneIndex
         void activateClip(int sceneIndex, ClipState state);

@@ -17,6 +17,7 @@
 #include <string>
 #include <memory>
 #include <any>
+#include <mutex>
 
 using namespace lab;
 using std::vector;
@@ -55,6 +56,7 @@ using MidiClipType = shared_ptr<MidiClip>;
         shared_ptr<AudioContext> context;
         shared_ptr<Playhead> playhead;
         vector<shared_ptr<TrackNode>> tracks;
+        std::mutex mtx;
         vector<Scene> scenes;
         vector<shared_ptr<MidiClip>> clips;
         shared_ptr<AnalyserNode> output;
@@ -76,8 +78,9 @@ using MidiClipType = shared_ptr<MidiClip>;
 
         // Gets a track by index.
         shared_ptr<TrackNode> getTrackByIndex(int);
+
         // Changes the order of the tracks
-        void reorderTrack(int startIndex, int endIndex);
+        void reorderTrack(int oldIndex, int newIndex);
 
         // Gets the currently selected Track
         shared_ptr<TrackNode> selectedTrack();
@@ -154,6 +157,11 @@ using MidiClipType = shared_ptr<MidiClip>;
 
         // Gets the clip at the provided position using int trackIndex, int sceneIndex
         MidiClipType selectClipByPosition(int trackIndex, int sceneIndex);
+
+        // Duplicate Clip to the scene below. Will create a scene if one doesn't exist
+        void duplicateClip(int trackIndex, int sceneIndex);
+        
+        void duplicateClip(std::pair<int, int> clipPosition);
 
         // Returns bool if the current clip position is selected, uses position
         bool isClipSelected(std::pair<int, int>);

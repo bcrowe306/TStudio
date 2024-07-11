@@ -20,6 +20,7 @@ add_subdirectory( ${CMAKE_SOURCE_DIR}/src/core)
 add_subdirectory( ${CMAKE_SOURCE_DIR}/src/hardware)
 add_subdirectory( ${CMAKE_SOURCE_DIR}/src/library)
 add_subdirectory( ${CMAKE_SOURCE_DIR}/src/ui)
+add_subdirectory( ${CMAKE_SOURCE_DIR}/src/controllers)
 
 
 # LabSound 
