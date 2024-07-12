@@ -1,7 +1,11 @@
 #include "core/TrackNode.h"
+#include "LabSound/core/StereoPannerNode.h"
+#include "LabSound/extended/PowerMonitorNode.h"
+#include "effects/MeterNode.h"
 #include "core/MidiMsg.h"
 #include "core/MidiNode.h"
 #include "library/UUID_Gen.h"
+#include <memory>
 
 using namespace lab;
 using namespace placeholders;
@@ -17,13 +21,25 @@ namespace tstudio {
             midiMsgFilter = MidiMsgFilter{"all", 0};
             midiHandlerId = midiEventRegistry.subscribe(
                 midiMsgFilter, std::bind(&TrackNode::onMidiMsg, this, _1));
-            volumeNode = make_shared<GainNode>(*this->context);
-            panNode = make_shared<StereoPannerNode>(*this->context);
+            volumeNode = make_shared<GainNode>(*context);
+            muteNode = make_shared<GainNode>(*context);
+            panNode = make_shared<StereoPannerNode>(*context);
+            meterNode = make_shared<MeterNode>(*context);
             input = make_shared<AnalyserNode>(*context);
             output = make_shared<AnalyserNode>(*context);
+
+            mute.callback = [this](string name, bool muted) {
+              if(muted){
+                this->muteNode->gain()->setValueAtTime(0.f,  0.01f);
+              }else{
+                this->muteNode->gain()->setValueAtTime(1.f,  0.01f);
+              }
+            };
+            mute.set(false);
             this->context->connect(panNode, input);
             this->context->connect(volumeNode, panNode);
-            this->context->connect(output, volumeNode);
+            this->context->connect(meterNode, volumeNode, 0, 0);
+            this->context->connect(output, meterNode);
         }
 
   TrackNode::~TrackNode(){
@@ -36,7 +52,7 @@ namespace tstudio {
   void TrackNode::set_instrument(shared_ptr<InstrumentDevice> instrument) {
     this->instrument = instrument;
     this->addOutputNode(instrument);
-    this->context->connect(output, this->instrument->output);
+    this->context->connect(input, this->instrument->output);
   }
 
   void TrackNode::onMidiMsg(MidiMsg &msg) {

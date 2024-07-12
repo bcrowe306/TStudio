@@ -2,6 +2,7 @@
 #define TRACKNODE_H
 
 #include "LabSound//LabSound.h"
+#include "LabSound/extended/PowerMonitorNode.h"
 #include "core/Playhead.h"
 #include "core/InstrumentDevice.h"
 #include "core/MidiClip.h"
@@ -9,6 +10,7 @@
 #include "core/MidiMsg.h"
 #include "core/MidiMsgFilter.h"
 #include "core/MidiNode.h"
+#include "effects/MeterNode.h"
 #include "core/InstrumentDevice.h"
 #include "library/Parameter.h"
 #include "uuid.h"
@@ -40,10 +42,12 @@ namespace tstudio {
         FloatParam pan = FloatParam("pan", "Pan", .5f, "Slider");
         StringParam color = StringParam("color", "Color", "", "Text");
         shared_ptr<GainNode> volumeNode;
+        shared_ptr<GainNode> muteNode;
         shared_ptr<InstrumentDevice> instrument;
         shared_ptr<StereoPannerNode> panNode;
         shared_ptr<AnalyserNode> input;
         shared_ptr<AnalyserNode> output;
+        shared_ptr<MeterNode> meterNode;
         shared_ptr<AudioContext> context;
         shared_ptr<Playhead> playhead;
         unordered_map<int, shared_ptr<MidiClip>> clips;
@@ -56,8 +60,6 @@ namespace tstudio {
 
         // Creates a new clip in the specified scene index with option length set in bars.
         shared_ptr<MidiClip> createClip(int sceneIndex, int lengthInBars = 0);
-
-        
 
         // Returns a clip by at the sceneIndex. If scneneIndex has no clip, will return nullptr
         shared_ptr<MidiClip> selectClip(int sceneIndex);

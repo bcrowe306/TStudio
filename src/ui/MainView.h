@@ -97,23 +97,6 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
     ImGui::NewLine();
   }
 
-  // Testing TrackList
-  float trackListHeight = 300.f;
-  float trackListWidth = size.x;
-  auto currentPos = GetCursorScreenPos();
-  auto space = GetContentRegionAvail();
-  auto startY = currentPos.y + (space.y - trackListHeight);
-  SetNextWindowPos(ImVec2(currentPos.x, startY));
-  PushStyleColor(ImGuiCol_ChildBg, U32FromHex(RECORD_COLOR));
-  PushStyleVar(ImGuiStyleVar_ChildRounding, 0.f);
-  BeginChild("tracklist",ImVec2(trackListWidth, trackListHeight), ImGuiChildFlags_Border );
-    Text("Test");
-  EndChild();
-  PopStyleVar();
-  PopStyleColor();
-
-  
-
   ImGui::End();
   ImGui::PopStyleVar(2);
   ImGui::PopStyleColor();

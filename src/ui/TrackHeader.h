@@ -4,6 +4,7 @@
 #include <imgui.h>
 #include "Colors.h"
 #include "core/TrackNode.h"
+#include "core/Session.h"
 #include "ui/Colors.h"
 #include "ui/Utility.h"
 // TODO: Rename track on double click, or right click context menu

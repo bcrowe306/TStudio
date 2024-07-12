@@ -19,6 +19,7 @@
 #include "ui/Toolbar.h"
 #include "ui/Colors.h"
 #include "ui/LayoutDimensions.h"
+#include "ui/TrackList.h"
 
 using namespace tstudio;
 using namespace placeholders;
@@ -49,6 +50,8 @@ void mainUI(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
         float toolbar_height = 50.0f;
         float sidebar_width = 250.0f;
         float footer_height = 300.0f;
+        float track_height = 250.f;
+        float track_width = 145.f;
         float main_width = window_width - sidebar_width;
         float main_height = window_height - footer_height - toolbar_height;
         ImGui::GetStyle().WindowRounding = 0.0f;
@@ -61,7 +64,8 @@ void mainUI(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
         Toolbar(session, playhead, ImVec2(0, 0), ImVec2(window_width, toolbar_height));
         Sidebar(session, playhead, ImVec2(0, toolbar_height), ImVec2(sidebar_width, main_height));
         FooterPanel(session, playhead, ImVec2(0, toolbar_height + main_height), ImVec2(window_width, footer_height));
-        MainView(session, playhead, ImVec2(sidebar_width, toolbar_height), ImVec2(main_width, main_height));
+        MainView(session, playhead, ImVec2(sidebar_width, toolbar_height), ImVec2(main_width, main_height - track_height));
+        TrackList(session, playhead, ImVec2(sidebar_width, main_height-track_height + toolbar_height), ImVec2(main_width, track_height));
     };
     std::cout << "uiThread\n";
     return HelloImGui::Run(params);
