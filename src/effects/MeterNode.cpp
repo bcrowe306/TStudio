@@ -54,6 +54,10 @@ void MeterNode::process(ContextRenderLock &r, int bufferSize) {
 
     // db is 20 * log10(rms/Vref) where Vref is 1.0
     _db = 20.0f * logf(rms) / logf(10.0f);
+    if(_db > smapleAmount){
+        smapleAmount = _db;
+    }
+    dbAsLinear();
   }
   // to here
 

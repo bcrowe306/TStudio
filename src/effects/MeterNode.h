@@ -5,6 +5,7 @@
 #ifndef METERNODE_H
 #define METERNODE_H
 
+#include "core/AudioUtility.h"
 #include "LabSound/LabSound.h"
 
 using namespace lab;
@@ -18,7 +19,10 @@ public:
 
     // Members
     int windowSize = 128;
-    float smapleAmount = .5f;
+    float smapleAmount = -10000.f;
+    float maxLinear = 0.f;
+    float maxDb = 30.f;
+    float maxPercentage = 0.f;
 
     // Contructors
     MeterNode(AudioContext &ac);
@@ -36,8 +40,23 @@ public:
     virtual void process(ContextRenderLock &, int bufferSize) override;
     virtual void reset(ContextRenderLock &) override;
     float db(){return _db;}
+    float percentage(){
+        auto max = dBToLinear(maxDb);
+        auto perc =  (dBToLinear(_db) / max);
+        if(perc > maxPercentage){
+            maxPercentage = perc;
+        }
+        return perc;
+    };
+    float dbAsLinear() { 
+        auto linear = std::pow(10.f, 0.05f * _db);
+        if (linear > maxLinear) {
+          maxLinear = linear;
+        }
+        return linear;
+    }
 
-private:
+  private:
     float _db;
 
 };

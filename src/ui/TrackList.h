@@ -9,6 +9,7 @@
 #include "ui/SessionCell.h"
 #include "ui/TrackHeader.h"
 #include <memory>
+#include <string>
 
 using namespace tstudio;
 using namespace ImGui;
@@ -50,15 +51,19 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
         // Draw Meters
         auto volumeLabel = (track->name.value + "_volumeSlider");
         auto meter_start_x = start_x + track_width / 2;
-        draw_list->AddRectFilled(ImVec2(meter_start_x, position.y + 15.f), ImVec2(meter_start_x + meter_width, position.y + size.y -track_name_height - 15.f ), U32FromHex(PLAY_COLOR));
-        draw_list->AddRectFilled(ImVec2(meter_start_x + meter_spacing, position.y + 15.f), ImVec2(meter_start_x + meter_width + meter_spacing, position.y + size.y -track_name_height - 15.f ), U32FromHex(PLAY_COLOR));
+        auto dbPercentage = 1 - track->meterNode->dbAsLinear();
+        draw_list->AddRectFilled(ImVec2(meter_start_x, position.y + 15.f), ImVec2(meter_start_x + meter_width, position.y + size.y -track_name_height - 15.f ), U32FromHex(TEXT_DARK_COLOR));
+        draw_list->AddRectFilled(ImVec2(meter_start_x + meter_spacing, position.y + 15.f), ImVec2(meter_start_x + meter_width + meter_spacing, position.y + size.y -track_name_height - 15.f ), U32FromHex(TEXT_DARK_COLOR));
+        draw_list->AddRectFilled(ImVec2(meter_start_x + meter_spacing, position.y + 80.f + (dbPercentage * 20.f)), ImVec2(meter_start_x + meter_width + meter_spacing, position.y + size.y -track_name_height - 15.f ), U32FromHex(PLAY_COLOR));
         auto volume = track->volumeNode->gain()->value();
         SetCursorScreenPos( ImVec2(meter_start_x + meter_spacing + 15.f, position.y + 15.f) );
-        if (VSliderFloat(volumeLabel.c_str(), ImVec2(15.f, 200.f), &volume,
-                         track->volumeNode->gain()->minValue(), 4.f)) {
+        PushID( ( track->name.value + std::to_string(i) ).c_str() );
+        if (VSliderFloat("##v", ImVec2(15.f, 200.f), &volume,
+                         track->volumeNode->gain()->minValue(), 8.f)) {
           track->volumeNode->gain()->setValueAtTime(volume, 0.01f);
         }
-        auto db = std::to_string(track->meterNode->db()).c_str();
+        auto db = std::to_string(track->meterNode->maxPercentage).c_str();
+        PopID();
         Text(db);
     }
   EndChild();
