@@ -8,6 +8,9 @@
 #include "ui/LayoutDimensions.h"
 #include "ui/SessionCell.h"
 #include "ui/TrackHeader.h"
+#include "ui/LetterButton.h"
+#include "ui/StereoMeter.h"
+#include "ui/Utility.h"
 #include <memory>
 #include <string>
 
@@ -16,14 +19,33 @@ using namespace ImGui;
 
 using std::shared_ptr;
 
-void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec2 position, ImVec2 size){
+
+void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec2 position, ImVec2 size, float trackWidth){
   // Testing TrackList
   float trackListHeight = size.y;
   float trackListWidth = size.x;
-  float track_width = 145.f;
-  float track_name_height = 20.f;
-  float meter_width = 5.f;
-  float meter_spacing = 7.f;
+  float topSectionHeight = 25.f;
+  float bottomSectionHeight = 20.f;
+  float meterWidth = 12.f;
+  float sliderWidth = 15.f;
+  float trackButtonSize = 25.f;
+  float padding_x = 10.f;
+  float padding_y = 15.f;
+
+  float middleSectionStart_y = position.y + topSectionHeight;
+  float bottomSectionStart_y = position.y + size.y - bottomSectionHeight; 
+  float middleSectionSize_y = bottomSectionStart_y - middleSectionStart_y;
+  float bottomSectionEnd_y = position.y + size.y; 
+
+  float meterStart_y = middleSectionStart_y + padding_y;
+  float meterEnd_y = bottomSectionStart_y - padding_y;
+  float meterSize_y = meterEnd_y - meterStart_y;
+
+  float innerItemsWidth =(padding_x * 3) + trackButtonSize + meterWidth + sliderWidth;
+
+  float innerButtonsHeight = (padding_y * 2) + (trackButtonSize * 3);
+  float startVCenterButtons_y = middleSectionStart_y + ((middleSectionSize_y - innerButtonsHeight) / 2);
+
   auto draw_list = GetWindowDrawList();
   SetNextWindowPos(position);
   PushStyleVar(ImGuiStyleVar_ChildRounding, 0.f);
@@ -32,39 +54,80 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
     for (int i = 0; i < session->tracks.size(); i++)
     {
         auto track = session->tracks[i];
-        auto start_x = position.x + (track_width * i);
-        auto end_x = position.x + (track_width * i) + track_width;
-        auto trackName_start = ImVec2(start_x, position.y + size.y - track_name_height);
-        auto trackName_end = ImVec2(end_x, position.y + size.y);
-        draw_list->AddRectFilled(trackName_start, trackName_end, U32FromHex(track->color.value.c_str()));
+        auto start_x = position.x + (trackWidth * i);
+        auto end_x = position.x + (trackWidth * i) + trackWidth;
+        float startCenter_x = start_x + ( (trackWidth - innerItemsWidth) / 2);
 
-        // Draw text on top of the rectangle
+        auto bottomSectionMin = ImVec2(start_x, bottomSectionStart_y);
+        auto bottomSectionMax = ImVec2(end_x, bottomSectionEnd_y);
+
+        // Determine track selected
+        bool selected = session->selectedTrackIndex() == i;
+
+        // Determine track colors
+        ImU32 trackFooterBgColor = (selected) ? U32FromHex(TRACK_HEADER_SELECTED_COLOR) : U32FromHex(TRACK_BACKGROUND_COLOR);
+        ImU32 trackFooterTextColor = (selected) ? U32FromHex(track->color.value.c_str()) : U32FromHex(TEXT_LIGHT_COLOR);
+        ImU32 trackColor = (selected) ? U32FromHex(SESSION_BACKGROUND_COLOR) : U32FromHex(TRACK_LIST_BACKGROUND_COLOR);
+
+        // Draw selected track if necessary
+        if (selected)
+        {
+          draw_list->AddRectFilled(ImVec2(start_x, position.y), ImVec2(end_x, position.y + size.y), trackColor, 0.f);
+        }else{
+          draw_list->AddRectFilled(ImVec2(start_x, position.y), ImVec2(end_x, position.y + size.y), trackColor, 0.f);
+        }
+
+
+        // Draw Top Section Border
+        draw_list->AddLine(ImVec2(start_x, middleSectionStart_y), ImVec2(end_x, middleSectionStart_y), U32FromHex(SESSION_BORDER_COLOR));
+
+        // Draw bottom section rect
+        draw_list->AddRectFilled(bottomSectionMin, bottomSectionMax, trackFooterBgColor);
+
+        // Draw Bottom Section text
         auto label = track->name.value.c_str();
         ImVec2 text_size = ImGui::CalcTextSize(label);
-        ImVec2 text_pos = ImVec2(trackName_start.x + (track_width - text_size.x) * 0.5f,
-                                 trackName_start.y + (track_name_height - text_size.y) * 0.5f);
-        draw_list->AddText(text_pos, U32FromHex(SESSION_BORDER_COLOR), label);
+        ImVec2 text_pos = ImVec2(bottomSectionMin.x + (trackWidth - text_size.x) * 0.5f,
+                                 bottomSectionMin.y + (bottomSectionHeight - text_size.y) * 0.5f);
+        draw_list->AddText(text_pos, trackFooterTextColor, label);
 
         // Draw Track Border
         draw_list->AddRect(ImVec2(start_x, position.y), ImVec2(end_x, position.y + size.y), U32FromHex(SESSION_BORDER_COLOR), 0.f);
 
+
+        // Draw Track Buttons
+        auto muted = track->mute.get();
+        auto solo = track->solo.get();
+        auto armed = track->arm.get();
+        if(LetterButton(draw_list, "M", ImVec2(startCenter_x, startVCenterButtons_y + (trackButtonSize * 0) + (padding_y * 0)),trackButtonSize, muted)){
+          track->mute.set(!muted);
+        }
+        if(LetterButton(draw_list, "S", ImVec2(startCenter_x, startVCenterButtons_y + (trackButtonSize * 1) + (padding_y * 1)), trackButtonSize, solo, false, U32FromHex(SOLO_COLOR))) {
+          track->solo.set(!solo);
+        }
+        if (LetterButton(draw_list, "R", ImVec2(startCenter_x, startVCenterButtons_y + (trackButtonSize * 2) + (padding_y * 2)), trackButtonSize, armed, false, U32FromHex(RECORD_COLOR))) {
+          track->arm.set(!armed);
+        }
+
         // Draw Meters
         auto volumeLabel = (track->name.value + "_volumeSlider");
-        auto meter_start_x = start_x + track_width / 2;
-        auto dbPercentage = 1 - track->meterNode->dbAsLinear();
-        draw_list->AddRectFilled(ImVec2(meter_start_x, position.y + 15.f), ImVec2(meter_start_x + meter_width, position.y + size.y -track_name_height - 15.f ), U32FromHex(TEXT_DARK_COLOR));
-        draw_list->AddRectFilled(ImVec2(meter_start_x + meter_spacing, position.y + 15.f), ImVec2(meter_start_x + meter_width + meter_spacing, position.y + size.y -track_name_height - 15.f ), U32FromHex(TEXT_DARK_COLOR));
-        draw_list->AddRectFilled(ImVec2(meter_start_x + meter_spacing, position.y + 80.f + (dbPercentage * 20.f)), ImVec2(meter_start_x + meter_width + meter_spacing, position.y + size.y -track_name_height - 15.f ), U32FromHex(PLAY_COLOR));
-        auto volume = track->volumeNode->gain()->value();
-        SetCursorScreenPos( ImVec2(meter_start_x + meter_spacing + 15.f, position.y + 15.f) );
+        auto meterStart_x = startCenter_x + trackButtonSize + padding_x;
+        float volume = track->volumeNode->gain()->value();
+        float rmsL = track->meterNode->rmsDb()[0];
+        float rmsR = track->meterNode->rmsDb()[1];
+        float peakL = track->meterNode->db()[0];
+        float peakR = track->meterNode->db()[1];
+        StereoMeter(draw_list, ImVec2(meterStart_x, meterStart_y), ImVec2(12.f,meterSize_y), peakL, peakR, rmsL, rmsR);
+        // Draw Slider
+        SetCursorScreenPos(ImVec2(meterStart_x + padding_x + 15.f, meterStart_y));
         PushID( ( track->name.value + std::to_string(i) ).c_str() );
-        if (VSliderFloat("##v", ImVec2(15.f, 200.f), &volume,
-                         track->volumeNode->gain()->minValue(), 8.f)) {
-          track->volumeNode->gain()->setValueAtTime(volume, 0.01f);
+        if (VSliderFloat("##v", ImVec2(sliderWidth, meterSize_y), &volume,
+                         0.f, 1.5f))
+        {
+          track->volumeNode->gain()->setValueAtTime(volume, 0.0f);
         }
-        auto db = std::to_string(track->meterNode->maxPercentage).c_str();
+        Text( std::to_string(track->meterNode->rmsDbLinear()[0]).c_str());
         PopID();
-        Text(db);
     }
   EndChild();
   PopStyleVar();

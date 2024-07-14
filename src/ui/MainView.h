@@ -11,7 +11,8 @@
 
 using namespace ImGui;
 
-void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead> playhead, ImVec2 position, ImVec2 size) {
+void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead> playhead, ImVec2 position, ImVec2 size, float trackWidth)
+{
   // Main Panel
   
   ImGui::SetNextWindowPos(position);
@@ -32,7 +33,6 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
     }
   }
   // Tracks Header
-  float trackWidth = 145.f;
   float trackHeight = 25.f;
 
   // Must get currentpos before we start tracks
@@ -101,6 +101,5 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
   ImGui::PopStyleVar(2);
   ImGui::PopStyleColor();
 };
-
 
 #endif // !MAINVIEW_H

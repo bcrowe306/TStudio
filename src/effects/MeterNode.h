@@ -7,6 +7,7 @@
 
 #include "core/AudioUtility.h"
 #include "LabSound/LabSound.h"
+#include <array>
 
 using namespace lab;
 
@@ -19,10 +20,6 @@ public:
 
     // Members
     int windowSize = 128;
-    float smapleAmount = -10000.f;
-    float maxLinear = 0.f;
-    float maxDb = 30.f;
-    float maxPercentage = 0.f;
 
     // Contructors
     MeterNode(AudioContext &ac);
@@ -39,26 +36,33 @@ public:
     }
     virtual void process(ContextRenderLock &, int bufferSize) override;
     virtual void reset(ContextRenderLock &) override;
-    float db(){return _db;}
-    float percentage(){
-        auto max = dBToLinear(maxDb);
-        auto perc =  (dBToLinear(_db) / max);
-        if(perc > maxPercentage){
-            maxPercentage = perc;
-        }
-        return perc;
-    };
-    float dbAsLinear() { 
-        auto linear = std::pow(10.f, 0.05f * _db);
-        if (linear > maxLinear) {
-          maxLinear = linear;
-        }
-        return linear;
-    }
+    std::array<float, 6> rmsDb() { return _rmsDb; }
+    std::array<float, 6> db() { return _db; }
+    std::array<float, 6> dbLinear();
+    std::array<float, 6> rmsDbLinear();
 
   private:
-    float _db;
+    std::array<float, 6> _rmsDb = {-72.f, -72.f, -72.f, -72.f, -72.f, -72.f};
+    std::array<float, 6> _rmsDbLinear;
+    std::array<float, 6> _db = {-72.f, -72.f, -72.f, -72.f, -72.f, -72.f};
+    std::array<float, 6> _dbLinear;
+    std::array<float, 6> power = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
 
+    float db_decay_factor = .999995f;
+    float rms_decay_factor = .999f;
+    float dB_min = -72.f;
+    float dB_max = 0.f;
+    const float kMinPower = 0.000125f;
+    float applyDecay(float current_dBFS, float previous_dBFS, float decay_factor);
+    float db_to_linear_ratio(float db_val)
+    {
+      return pow(10.0, db_val / 10.0);
+    }
+
+    float linearToUnit(float linearDb)
+    {
+       return (linearDb + 1.f) / 2;
+    }
 };
 
 }

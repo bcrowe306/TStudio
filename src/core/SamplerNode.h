@@ -51,7 +51,7 @@ public:
     panNode = make_shared<PannerNode>(*audioContext);
     
     velocityNode->gain()->setValue(.5f);
-    gainNode->gain()->setValue(.5f);
+    gainNode->gain()->setValue(1.f);
 
     // osc -> destination
     audioContext->connect(velocityNode, sampledAudioNode);
