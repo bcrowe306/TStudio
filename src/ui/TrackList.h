@@ -11,6 +11,7 @@
 #include "ui/LetterButton.h"
 #include "ui/StereoMeter.h"
 #include "ui/Utility.h"
+#include "ui/imgui-knobs.h"
 #include <memory>
 #include <string>
 
@@ -47,6 +48,7 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
   float startVCenterButtons_y = middleSectionStart_y + ((middleSectionSize_y - innerButtonsHeight) / 2);
 
   auto draw_list = GetWindowDrawList();
+  ImGuiIO &io = ImGui::GetIO();
   SetNextWindowPos(position);
   PushStyleVar(ImGuiStyleVar_ChildRounding, 0.f);
   PushStyleColor(ImGuiCol_ChildBg, U32FromHex(SESSION_BACKGROUND_COLOR));
@@ -118,7 +120,14 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
         float peakL = track->meterNode->db()[0];
         float peakR = track->meterNode->db()[1];
         StereoMeter(draw_list, ImVec2(meterStart_x, meterStart_y), ImVec2(12.f,meterSize_y), peakL, peakR, rmsL, rmsR);
+
         // Draw Slider
+        float pan = track->panNode->pan()->value();
+        auto panMin = track->panNode->pan()->minValue();
+        auto panMax = track->panNode->pan()->maxValue();
+        if(ImGuiKnobs::Knob("Test", &pan, panMin, panMax, 0.f, "%.2f", ImGuiKnobVariant_Tick, 50.f)){
+          track->panNode->pan()->setValueAtTime(pan, 0.f);
+        }
         SetCursorScreenPos(ImVec2(meterStart_x + padding_x + 15.f, meterStart_y));
         PushID( ( track->name.value + std::to_string(i) ).c_str() );
         if (VSliderFloat("##v", ImVec2(sliderWidth, meterSize_y), &volume,
@@ -126,8 +135,12 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
         {
           track->volumeNode->gain()->setValueAtTime(volume, 0.0f);
         }
-        Text( std::to_string(track->meterNode->rmsDbLinear()[0]).c_str());
         PopID();
+
+        if (ImGui::IsMouseClicked(0) && IsMouseHit(ImVec2(start_x, position.y), ImVec2(end_x, bottomSectionEnd_y), io.MousePos))
+        {
+          session->selectTrack(i);
+        }
     }
   EndChild();
   PopStyleVar();
