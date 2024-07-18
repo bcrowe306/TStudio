@@ -23,7 +23,9 @@ namespace tstudio {
                 midiMsgFilter, std::bind(&TrackNode::onMidiMsg, this, _1));
             volumeNode = make_shared<GainNode>(*context);
             muteNode = make_shared<GainNode>(*context);
+            // Setup Pan Node
             panNode = make_shared<StereoPannerNode>(*context);
+            panNode->pan()->setValueAtTime(0.f, 0.f);
             meterNode = make_shared<MeterNode>(*context);
             input = make_shared<AnalyserNode>(*context);
             output = make_shared<AnalyserNode>(*context);

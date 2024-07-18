@@ -49,7 +49,7 @@ void mainUI(shared_ptr<Session> session, shared_ptr<Playhead> playhead)
         float window_height = space.y;
         // Set up panel sizes and positions
         float toolbar_height = 50.0f;
-        float sidebar_width = 250.0f;
+        float sidebar_width = 300.0f;
         float footer_height = 300.0f;
         float track_height = 250.f;
         float track_width = 115.f;

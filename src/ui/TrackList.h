@@ -43,8 +43,8 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
   float meterSize_y = meterEnd_y - meterStart_y;
 
   float innerItemsWidth =(padding_x * 3) + trackButtonSize + meterWidth + sliderWidth;
-
-  float innerButtonsHeight = (padding_y * 2) + (trackButtonSize * 3);
+  float panElementHeight = 80.f;
+  float innerButtonsHeight = (padding_y * 2) + (trackButtonSize * 3) + panElementHeight;
   float startVCenterButtons_y = middleSectionStart_y + ((middleSectionSize_y - innerButtonsHeight) / 2);
 
   auto draw_list = GetWindowDrawList();
@@ -83,31 +83,43 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
         // Draw Top Section Border
         draw_list->AddLine(ImVec2(start_x, middleSectionStart_y), ImVec2(end_x, middleSectionStart_y), U32FromHex(SESSION_BORDER_COLOR));
 
-        // Draw bottom section rect
-        draw_list->AddRectFilled(bottomSectionMin, bottomSectionMax, trackFooterBgColor);
 
-        // Draw Bottom Section text
-        auto label = track->name.value.c_str();
-        ImVec2 text_size = ImGui::CalcTextSize(label);
-        ImVec2 text_pos = ImVec2(bottomSectionMin.x + (trackWidth - text_size.x) * 0.5f,
-                                 bottomSectionMin.y + (bottomSectionHeight - text_size.y) * 0.5f);
-        draw_list->AddText(text_pos, trackFooterTextColor, label);
-
-        // Draw Track Border
-        draw_list->AddRect(ImVec2(start_x, position.y), ImVec2(end_x, position.y + size.y), U32FromHex(SESSION_BORDER_COLOR), 0.f);
+        
 
 
-        // Draw Track Buttons
+        // Draw Track Pan and Buttons
+
         auto muted = track->mute.get();
         auto solo = track->solo.get();
         auto armed = track->arm.get();
-        if(LetterButton(draw_list, "M", ImVec2(startCenter_x, startVCenterButtons_y + (trackButtonSize * 0) + (padding_y * 0)),trackButtonSize, muted)){
+        float pan = track->panNode->pan()->value();
+        auto panMin = track->panNode->pan()->minValue();
+        auto panMax = track->panNode->pan()->maxValue();
+
+        // Draw pan
+        SetCursorScreenPos(ImVec2(startCenter_x, startVCenterButtons_y));
+        PushID( ("trackPan_" + std::to_string(i)).c_str() );
+        PushStyleColor(ImGuiCol_ButtonActive, U32FromHex(TEXT_LIGHT_COLOR));
+        PushStyleColor(ImGuiCol_ButtonHovered, U32FromHex(BOOL_ON_COLOR));
+        if (ImGuiKnobs::Knob("Pan", &pan, -1.f, panMax, 0.f, "%.2f",
+                             ImGuiKnobVariant_Tick, 50.f)) {
+          track->panNode->pan()->setValueAtTime(pan, 0.f);
+        }
+        PopStyleColor(2);
+        PopID();
+
+        // Draw Mute
+        if(LetterButton(draw_list, "M", ImVec2(startCenter_x, startVCenterButtons_y + panElementHeight + (trackButtonSize * 0) + (padding_y * 0)),trackButtonSize, muted)){
           track->mute.set(!muted);
         }
-        if(LetterButton(draw_list, "S", ImVec2(startCenter_x, startVCenterButtons_y + (trackButtonSize * 1) + (padding_y * 1)), trackButtonSize, solo, false, U32FromHex(SOLO_COLOR))) {
+
+        // Draw Solo
+        if(LetterButton(draw_list, "S", ImVec2(startCenter_x, startVCenterButtons_y + panElementHeight + (trackButtonSize * 1) + (padding_y * 1)), trackButtonSize, solo, false, U32FromHex(SOLO_COLOR))) {
           track->solo.set(!solo);
         }
-        if (LetterButton(draw_list, "R", ImVec2(startCenter_x, startVCenterButtons_y + (trackButtonSize * 2) + (padding_y * 2)), trackButtonSize, armed, false, U32FromHex(RECORD_COLOR))) {
+
+        // Draw Arm
+        if (LetterButton(draw_list, "R", ImVec2(startCenter_x, startVCenterButtons_y + panElementHeight + (trackButtonSize * 2) + (padding_y * 2)), trackButtonSize, armed, false, U32FromHex(RECORD_COLOR))) {
           track->arm.set(!armed);
         }
 
@@ -122,12 +134,7 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
         StereoMeter(draw_list, ImVec2(meterStart_x, meterStart_y), ImVec2(12.f,meterSize_y), peakL, peakR, rmsL, rmsR);
 
         // Draw Slider
-        float pan = track->panNode->pan()->value();
-        auto panMin = track->panNode->pan()->minValue();
-        auto panMax = track->panNode->pan()->maxValue();
-        if(ImGuiKnobs::Knob("Test", &pan, panMin, panMax, 0.f, "%.2f", ImGuiKnobVariant_Tick, 50.f)){
-          track->panNode->pan()->setValueAtTime(pan, 0.f);
-        }
+        // TODO: Extract Slider into it's own function. implement conversion formula to and from decibel and linear values. Also implement scale beside meter
         SetCursorScreenPos(ImVec2(meterStart_x + padding_x + 15.f, meterStart_y));
         PushID( ( track->name.value + std::to_string(i) ).c_str() );
         if (VSliderFloat("##v", ImVec2(sliderWidth, meterSize_y), &volume,
@@ -137,10 +144,22 @@ void TrackList(shared_ptr<Session> session, shared_ptr<Playhead> playHead, ImVec
         }
         PopID();
 
-        if (ImGui::IsMouseClicked(0) && IsMouseHit(ImVec2(start_x, position.y), ImVec2(end_x, bottomSectionEnd_y), io.MousePos))
-        {
+         // Draw bottom section rect
+        draw_list->AddRectFilled(bottomSectionMin, bottomSectionMax, trackFooterBgColor);
+         // Draw Bottom Section text
+        auto label = track->name.value.c_str();
+        ImVec2 text_size = ImGui::CalcTextSize(label);
+        ImVec2 text_pos = ImVec2(bottomSectionMin.x + (trackWidth - text_size.x) * 0.5f,
+                                 bottomSectionMin.y + (bottomSectionHeight - text_size.y) * 0.5f);
+        draw_list->AddText(text_pos, trackFooterTextColor, label);
+        if(IsMouseHit(bottomSectionMin, bottomSectionMax, io.MousePos) && IsMouseClicked(0)){
           session->selectTrack(i);
         }
+
+        // Draw Track Border
+        draw_list->AddRect(ImVec2(start_x, position.y),
+                           ImVec2(end_x, position.y + size.y),
+                           U32FromHex(SESSION_BORDER_COLOR), 0.f);
     }
   EndChild();
   PopStyleVar();

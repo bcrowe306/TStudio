@@ -14,7 +14,8 @@ using namespace ImGui;
 void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead> playhead, ImVec2 position, ImVec2 size, float trackWidth)
 {
   // Main Panel
-  
+  auto mainViewStart = position;
+  auto mainViewEnd = ImVec2(position.x + size.x, position.y + size.y);
   ImGui::SetNextWindowPos(position);
   ImGui::SetNextWindowSize(size);
   ImGui::PushStyleColor(ImGuiCol_WindowBg,
@@ -61,8 +62,8 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
   if (ImGui::IsMouseDragging(0) && IsMouseHit(rectMin, ImVec2(rectMax.x, rectMin.y + trackHeight), io.MousePos))
   {
     ImVec2 value_raw = ImGui::GetMouseDragDelta(0, 0.0f);
-    oldIndex = (int)(io.MouseClickedPos->x - 250.f) / (int)trackWidth;
-    newIndex = (int)(io.MousePos.x - 250.f) / (int)trackWidth;
+    oldIndex = (int)(io.MouseClickedPos->x - mainViewStart.x) / (int)trackWidth;
+    newIndex = (int)(io.MousePos.x - mainViewStart.x) / (int)trackWidth;
     newIndex = (newIndex < session->tracks.size()) ? newIndex : (int)session->tracks.size() - 1;
     auto line_x = newIndex * trackWidth + pos.x;
     if(value_raw.x > 0){
@@ -76,8 +77,8 @@ void MainView(shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead
   }
   if (ImGui::IsMouseReleased(0) && IsMouseHit(rectMin, ImVec2(rectMax.x, rectMin.y + trackHeight), io.MousePos))
   {
-    oldIndex = (int)(io.MouseClickedPos->x - 250.f) / (int)trackWidth;
-    newIndex = (int)(io.MousePos.x - 250.f) / (int)trackWidth;
+    oldIndex = (int)(io.MouseClickedPos->x - mainViewStart.x) / (int)trackWidth;
+    newIndex = (int)(io.MousePos.x - mainViewStart.x) / (int)trackWidth;
     newIndex = (newIndex < session->tracks.size()) ? newIndex : (int)session->tracks.size() - 1;
     session->reorderTrack(oldIndex, newIndex);
   }

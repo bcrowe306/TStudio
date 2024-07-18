@@ -268,6 +268,7 @@ bool MidiClip::receive(MidiMsg &msg) {
 }
 
 void MidiClip::record(MidiMsg &event) {
+  // TODO: Implement recording of CC data, aftertouch, ptichwheel, etc. May need to leverage choc midi sequence. It may have already solved this.
   auto playheadState = playhead->getState();
 
   // Quantize start note values entered in during precount

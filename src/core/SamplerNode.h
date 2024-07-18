@@ -73,15 +73,16 @@ public:
   }
 
   MidiMsg process(MidiMsg &msg){
-    auto freq = msg.getNoteNumber().getFrequency();
-    if (msg.isNoteOn())
-    {
-      velocityNode->gain()->setValueAtTime(msg.getUnitVelocity(), 0.f);
-      sampledAudioNode->schedule(0.f);
-    }
-    if (msg.isNoteOff())
-    {
-      // sampledAudioNode->clearSchedules();
+    if(audioBus){
+      auto freq = msg.getNoteNumber().getFrequency();
+      if (msg.isNoteOn()) {
+        velocityNode->gain()->setValueAtTime(msg.getUnitVelocity(), 0.f);
+        sampledAudioNode->detune()->setValueAtTime(-24.f, 0.f);
+        sampledAudioNode->schedule(0.f);
+      }
+      if (msg.isNoteOff()) {
+        // sampledAudioNode->clearSchedules();
+      }
     }
     return msg;
   }
