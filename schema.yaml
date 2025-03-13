@@ -43,3 +43,58 @@ NextClipState:
       immediate_transition_if:
         condition:
           launchQuant == Off
+
+
+Sampler:
+  - Attributes:
+      - filepath: string
+      - name: string
+      - buffer: vector
+      - start: float
+      - end: float
+      - length: float
+      - volume: float
+      - pan: float
+      - velocity_sensitivity: float
+      - start_note: int
+      - end_note: int
+      - loop: bool
+      - loop_start: float
+      - loop_end: float
+      - loop_length: float
+      - playback_mode: enum[ADSR, ONE_SHOT, LOOP]
+      - one_shot_playback_mode: enum[CONTINUE, GATE]
+      - one_shot_fade_in: float
+      - one_shot_fade_out: float
+      - attack: float
+      - decay: float
+      - sustain: float
+      - release: float
+      - voices: int
+      - attack_curve: float
+      - decay_curve: float
+      - releas_curve: float
+      - filter_enabled: bool
+      - filter_type: enum[LOW_PASS, HIGH_PASS, BAND_PASS, NOTCH]
+      - filter_frequency: float
+      - filter_resonance: float
+      - stretch: bool
+      - stretch_mode: enum[BEAT, TONAL]
+      - stretch_ratio: float
+      - stretch_window: float
+      - stretch_grain_size: float
+      - stretch_overlap: float
+      - stretch_crossfade: float
+      - stretch_algorithm: enum[FFT, PHASE_VOCODER]
+      - stretch_transients: bool
+      - stretch_transients_threshold: float
+      - stretch_transients_overlap: float
+
+
+MidiDevice:
+  index: int
+  name: string
+  type: enum[INPUT, OUTPUT]
+  track: bool # If the device will appear in the track list
+  sync: bool # If the device will be used for sync
+  remote: bool # If the device will be used for remote control

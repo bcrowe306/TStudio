@@ -78,6 +78,26 @@ set(RESOURCE_FILES
   )
 
 
+#  PyBind11
+find_package(pybind11 REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE pybind11::embed) 
+
+# Midi Scripts
+set(MIDI_SCRIPT_SRC_DIR ${CMAKE_SOURCE_DIR}/src/hardware/scripts)
+set(MIDI_SCRIPTS_DST_DIR ${CMAKE_CURRENT_BINARY_DIR}/hardware/scripts)
+
+add_custom_command(
+    OUTPUT ${MIDI_SCRIPTS_DST_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${MIDI_SCRIPT_SRC_DIR} ${MIDI_SCRIPTS_DST_DIR}
+    DEPENDS ${MIDI_SCRIPT_SRC_DIR}
+    VERBATIM
+)
+add_custom_target(copy_midi_scripts ALL
+    DEPENDS ${MIDI_SCRIPTS_DST_DIR}
+)
+
+add_dependencies(${PROJECT_NAME} copy_midi_scripts)
+
 
 if(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE

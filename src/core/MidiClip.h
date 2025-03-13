@@ -30,7 +30,7 @@ using std::any_cast;
 using HandlerId = std::size_t;
 namespace tstudio {
   class PlayheadTick;
-  const enum class ClipState {
+  enum class ClipState {
 
     // Is stopped.
     STOPPED,

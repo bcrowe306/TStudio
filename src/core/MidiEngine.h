@@ -40,11 +40,20 @@ namespace tstudio {
 
         void initialize();
 
+        
+        void setMidiOutQueue(choc::fifo::SingleReaderSingleWriterFIFO<MidiMsg> &midiOutQueue);
+        
         void setInputDeviceEnabled(const std::string &name, bool enabled);
 
-        void setMidiOutQueue(choc::fifo::SingleReaderSingleWriterFIFO<MidiMsg> &midiOutQueue);
-
         void setOutputDeviceEnabled(const std::string &name, bool enabled);
+
+        void setInputDeviceSyncEnabled(const std::string &name, bool enabled);
+        void setInputDeviceRemoteEnabled(const std::string &name, bool enabled);
+        void setInputDeviceTrackEnabled(const std::string &name, bool enabled);
+
+        void setOutputDeviceSyncEnabled(const std::string &name, bool enabled);
+        void setOutputDeviceRemoteEnabled(const std::string &name, bool enabled);
+        void setOutputDeviceTrackEnabled(const std::string &name, bool enabled);
 
         void onMidiOut(const MidiMsg &event);
 
@@ -55,6 +64,8 @@ namespace tstudio {
         void deactivate();
 
         void process(MidiMsg &event) override;
+
+        void onMidiClockOut();
 
     private:
         // MidiEventRegistry midiEventRegistry;

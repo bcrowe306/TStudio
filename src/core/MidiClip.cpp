@@ -92,8 +92,14 @@ void MidiClip::setNextClipState(ClipState next_state)
       }
       else
       {
-        setState(ClipState::LAUNCHING_PLAY);
-        nextState = ClipState::PLAYING;
+        if(getState() == ClipState::RECORDING){
+          setState(ClipState::PLAYING);
+          next_state = ClipState::PLAYING;
+        }else{
+          setState(ClipState::LAUNCHING_PLAY);
+          nextState = ClipState::PLAYING;
+        }
+        
       }
     default:
       break;
@@ -242,16 +248,22 @@ std::tuple<int, int, int> MidiClip::getPosition() const {
 
 void MidiClip::setLength(int length) { 
   this->length = length;
-  songPosition.setFromTick(length); 
+  
+  songPosition.setFromTick(length);
+  if (counter > length)
+  {
+    counter = 0;
+  }
   }
 
 void MidiClip::setLengthInBars(int bars) {
   if (bars > 0)
   {
     songPosition.bar = bars;
+    auto lengthInTick = songPosition.getTickCount();
+    setLength(lengthInTick);
   }
-  auto lengthInTick = songPosition.getTickCount();
-  setLength(lengthInTick);
+  
 }
 
 void MidiClip::increaseLength() { length = counter + 2; }
@@ -265,6 +277,7 @@ bool MidiClip::receive(MidiMsg &msg) {
   {
     record(msg);
   }
+  return true;
 }
 
 void MidiClip::record(MidiMsg &event) {

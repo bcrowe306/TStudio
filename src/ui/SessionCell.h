@@ -249,7 +249,7 @@ void SessionCell(std::pair<int, int> cellPosition, shared_ptr<Session> session,
 
   // Draw selected border
   if (selected) {
-    draw_list->AddRect(ImVec2(p.x +1, p.y+1), p2_max, U32FromHex(BOOL_ON_COLOR), 0.f, NULL);
+    draw_list->AddRect(ImVec2(p.x +1, p.y+1), p2_max, U32FromHex(BOOL_ON_COLOR), 0.f, ImDrawFlags_None);
   }
 
   auto cellMin = ImGui::GetItemRectMin();

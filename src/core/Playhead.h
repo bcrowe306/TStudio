@@ -52,6 +52,7 @@ public:
   using HandlerId = std::size_t;
   // Members
   int tpqn = 480;
+  int midi_clocks_per_qtr = 24;
   int samplesPerTick;
   bool enabled = true;
   int last_play_position_sample = 0;
@@ -108,6 +109,9 @@ public:
   // registration "subscribeTickHandler".
   void unsubscribeTickHandler(HandlerId id);
 
+  // Set the function to be called when a midi clock event is generated.
+  void setMidiClockOutHandler(std::function<void()> handler);
+
   // 
   
 
@@ -119,6 +123,9 @@ private:
   vector<pair<HandlerId, function<void(PlayheadTick&)>>> tickHandlers;
   PlayheadTick playheadTick{};
   // Notify all handlers of current tick event.
+  std::function<void()> onMidiClockOut;
+  
+  void sendMidiClockEvent();
   void notifyTick();
   int __ticksPerBeat() const;
   int __ticksPerBar() const;

@@ -16,6 +16,18 @@ namespace tstudio {
         bool with_input = false;
 
         for (auto &info : audioDevices) {
+            // Log the device info
+            printf("Device %d: %s\n", info.index, info.identifier.c_str());
+            printf("  Input Channels: %d\n", info.num_input_channels);
+            printf("  Output Channels: %d\n", info.num_output_channels);
+            // Print sample rates
+            for(auto rate : info.supported_samplerates){
+                printf("  Sample Rate: %f\n", rate);
+            }
+            printf("  Default Input: %s\n", info.is_default_input ? "yes" : "no");
+            printf("  Default Output: %s\n", info.is_default_output ? "yes" : "no");
+
+
             if (info.is_default_output)
                 defaultOutputInfo = info;
             if (info.is_default_input)
@@ -80,4 +92,8 @@ namespace tstudio {
         audioDevice->setDestinationNode(destinationNode);
         context->setDestinationNode(destinationNode);
     }
+    // TODO: Implement a way to change the audio device
+    // TODO: Implement a way to stop the audio engine, rescan devices, and restart
+    // TODO: Will also need to store the available devices in a list
+    // TODO: Will need to implement a way to change audio engine settings, buffer size and sample rate.
 } // namespace tstudio

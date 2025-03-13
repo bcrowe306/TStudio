@@ -38,10 +38,10 @@ namespace tstudio {
               }
             };
             mute.set(false);
-            this->context->connect(panNode, input);
-            this->context->connect(volumeNode, panNode);
+            this->context->connect(panNode, input, 0, 0);
+            this->context->connect(volumeNode, panNode, 0, 0);
             this->context->connect(meterNode, volumeNode, 0, 0);
-            this->context->connect(output, meterNode);
+            this->context->connect(output, meterNode, 0, 0);
         }
 
   TrackNode::~TrackNode(){

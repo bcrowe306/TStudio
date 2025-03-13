@@ -19,6 +19,27 @@ namespace tstudio {
 
     void MidiEngine::refreshDevices()
     {
+        // Loop through the midi input and output devices and close the ports
+        for (auto &[name, midiInPort] : inputDevices)
+        {
+            if (midiInPort->port->isPortOpen())
+            {
+                midiInPort->port->closePort();
+            }
+        }
+        for (auto &[name, midiOutPort] : outputDevices)
+        {
+            if (midiOutPort->port->isPortOpen())
+            {
+                midiOutPort->port->closePort();
+            }
+        }
+
+        // Clear the maps
+        inputDevices.clear();
+        outputDevices.clear();
+        inputCallbackMap.clear();
+
         for (unsigned int i = 0; i < midiIn->getPortCount(); i++)
         {
             auto device = midiIn->getPortName(i);
@@ -103,8 +124,67 @@ namespace tstudio {
             outputDevices[name]->enabled = enabled;
         }
     };
+
+    void MidiEngine::setInputDeviceSyncEnabled(const std::string &name, bool enabled)
+    {
+        if (inputDevices.find(name) != inputDevices.end())
+        {
+            inputDevices[name]->set_sync_enabled(enabled);
+        }
+    };
+    void MidiEngine::setInputDeviceRemoteEnabled(const std::string &name, bool enabled)
+    {
+        if (inputDevices.find(name) != inputDevices.end())
+        {
+            inputDevices[name]->set_remote_enabled(enabled);
+        }
+    };
+    void MidiEngine::setInputDeviceTrackEnabled(const std::string &name, bool enabled)
+    {
+        if (inputDevices.find(name) != inputDevices.end())
+        {
+            inputDevices[name]->set_track_enabeld(enabled);
+        }
+    };
+
+    void MidiEngine::setOutputDeviceSyncEnabled(const std::string &name, bool enabled)
+    {
+        if (outputDevices.find(name) != outputDevices.end())
+        {
+            outputDevices[name]->set_sync_enabled(enabled);
+        }
+    };
+    void MidiEngine::setOutputDeviceRemoteEnabled(const std::string &name, bool enabled)
+    {
+        if (outputDevices.find(name) != outputDevices.end())
+        {
+            outputDevices[name]->set_remote_enabled(enabled);
+        }
+    };
+    void MidiEngine::setOutputDeviceTrackEnabled(const std::string &name, bool enabled)
+    {
+        if (outputDevices.find(name) != outputDevices.end())
+        {
+            outputDevices[name]->set_track_enabeld(enabled);
+        }
+    };
+
     void MidiEngine::process(MidiMsg &event)
     {
         midiEventRegistry->notify(event.device.value(), event);
+    };
+
+    void MidiEngine::onMidiClockOut()
+    {
+        // Send a midi clock message to all output devices that have sync enabled
+        for (auto &[name, midiOutPort] : outputDevices)
+        {
+            if (midiOutPort->is_sync_enabled())
+            {
+                std::vector<unsigned char> message;
+                message.push_back(0xF8);
+                midiOut->sendMessage(&message);
+            }
+        }
     };
 }

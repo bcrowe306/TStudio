@@ -22,31 +22,32 @@ using MidiClipType = shared_ptr<MidiClip>;
 Session::Session(shared_ptr<AudioContext> context,
                  shared_ptr<Playhead> playhead)
     : context(context), playhead(playhead), id(GenerateUUID()), EventBase() {
-  // Preallocate Scene and Track vectors
-  scenes.reserve(64);
-  tracks.reserve(64);
-  clips.reserve(4096);
-  auto HOME = (std::string)getenv("HOME") + "/Documents";
-  this->browser = make_shared<Browser>(HOME);
+    // Preallocate Scene and Track vectors
+    scenes.reserve(64);
+    tracks.reserve(64);
+    clips.reserve(4096);
+    auto HOME = (std::string)getenv("HOME") + "/Documents";
+    this->browser = make_shared<Browser>();
+    this->browser->addBrowserItem(HOME);  
 
-      // Setup Main output for tracks
-      output = make_shared<AnalyserNode>(*context);
-  context->connect(context->destinationNode(), output);
+    // Setup Main output for tracks
+    output = make_shared<AnalyserNode>(*context);
+    context->connect(context->destinationNode(), output);
 
-  // Subscribe to playhead state events
-  eventRegistry.subscribe("playhead.state",
-                          std::bind(&Session::onPlayheadStateChange, this, _1));
+    // Subscribe to playhead state events
+    eventRegistry.subscribe("playhead.state",
+                            std::bind(&Session::onPlayheadStateChange, this, _1));
 
-  // Setup initial track and scene
-  for (size_t i = 0; i < 4; i++) {
-    addScene();
-  }
-  auto newTrack = addTrack();
+    // Setup initial track and scene
+    for (size_t i = 0; i < 4; i++) {
+        addScene();
+    }
+    auto newTrack = addTrack();
 
-  // Demo code to setup InstrumentTrack
-  auto sampler =
-      make_shared<SamplerNode>(context, "assets/BVKER - The Astro Perc 08.wav");
-  newTrack->set_instrument(sampler);
+    // Demo code to setup InstrumentTrack
+    auto sampler =
+        make_shared<SamplerNode>(context, "assets/BVKER - The Astro Perc 08.wav");
+    newTrack->set_instrument(sampler);
 
     }
 

@@ -77,7 +77,11 @@ public:
       auto freq = msg.getNoteNumber().getFrequency();
       if (msg.isNoteOn()) {
         velocityNode->gain()->setValueAtTime(msg.getUnitVelocity(), 0.f);
-        sampledAudioNode->detune()->setValueAtTime(-24.f, 0.f);
+        // Calculate the playback rate based on the frequency of the note and the base midi note of 60
+        auto freq = msg.getNoteNumber().getFrequency();
+        auto baseFreq = 261.63f;
+        auto playbackRate = freq / baseFreq;
+        sampledAudioNode->playbackRate()->setValue(playbackRate);
         sampledAudioNode->schedule(0.f);
       }
       if (msg.isNoteOff()) {

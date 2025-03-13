@@ -97,6 +97,13 @@ void Playhead::setState(PlayheadState state) {
       state = PlayheadState::RECORDING;
     }
   }
+
+  // Set state to playing with conditions
+  if (state == PlayheadState::PLAYING){
+    if (_state == PlayheadState::RECORDING){
+      
+    }
+  }
   // Only change the state if a change is needed
   if(state != _state){
     _state = state;
@@ -213,11 +220,33 @@ int Playhead::__ticksPerBeat() const { return tpqn / (time_sig.first / 4); }
 int Playhead::__ticksPerBar() const {
   return __ticksPerBeat() * time_sig.first;
 }
+
+void Playhead::setMidiClockOutHandler(std::function<void()> handler) {
+  onMidiClockOut = handler;
+}
+
+void Playhead::sendMidiClockEvent(){
+  if(onMidiClockOut){
+    onMidiClockOut();
+  }
+}
+
 void Playhead::callback(ContextRenderLock &r, FunctionNode *me, int channel,
-                        float *buffer, int bufferSize) {
+                       float *buffer, int bufferSize) {
   auto phn = (Playhead *)me;
+                        
+
+  // calculate samplers per midi clock based on tempo
+  int samplesPerMidiClock = (int)round(r.context()->sampleRate() / (phn->_tempo / 60.0f) / phn->midi_clocks_per_qtr);
+
 
   for (size_t i = 0; i < bufferSize; i++) {
+
+
+    if(phn->isMod(phn->playheadTick.sampleCount, samplesPerMidiClock)){
+      phn->sendMidiClockEvent();
+    }
+
     //  istick
     if (phn->getState() != PlayheadState::STOPPED) {
       if (phn->isMod(phn->playheadTick.sampleCount, phn->samplesPerTick))

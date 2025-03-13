@@ -18,6 +18,16 @@
     "files.associations": {
         "ostream": "cpp",
         "__mutex_base": "cpp",
-        "vector": "cpp"
-    }
+        "vector": "cpp",
+        "future": "cpp"
+    },
+    "cSpell.words": [
+        "CLIPDETAIL",
+        "clipstate",
+        "playhead"
+    ],
+    "cSpell.ignoreWords": [
+        "CLIPVIEW",
+        "SESSIONCELL"
+    ]
 }

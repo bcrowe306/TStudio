@@ -12,6 +12,7 @@
     "libusb",
     "rtmidi",
     "stduuid",
-    "yaml-cpp"
+    "yaml-cpp",
+    "pybind11"
   ]
 }

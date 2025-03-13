@@ -1,8 +1,11 @@
-#include "string"
+#pragma once
+
+#ifndef MIDIDEVICE_H
+#define MIDIDEVICE_H
+
 #include "memory"
 #include "rtmidi/RtMidi.h"
-
-#pragma once
+#include "string"
 
 namespace tstudio
 {
@@ -21,6 +24,37 @@ namespace tstudio
             this->port = port;
             this->enabled = enabled;
         };
+        void set_track_enabeld(bool enabled)
+        {
+            this->_track = enabled;
+        }
+        bool is_track_enabled()
+        {
+            return this->_track;
+        }
+
+        void set_sync_enabled(bool enabled)
+        {
+            this->_sync = enabled;
+        }
+        bool is_sync_enabled()
+        {
+            return this->_sync;
+        }
+        
+        void set_remote_enabled(bool enabled)
+        {
+            this->_remote = enabled;
+        }
+        bool is_remote_enabled()
+        {
+            return this->_remote;
+        }
+    protected:
+        bool _track;
+        bool _sync;
+        bool _remote;
+
     };
     class MidiOutPort
     {
@@ -46,6 +80,23 @@ namespace tstudio
             midiMessage.push_back(data2);
             port->sendMessage(&midiMessage);
         }
+        void set_track_enabeld(bool enabled) { this->_track = enabled; }
+        bool is_track_enabled() { return this->_track; }
+
+        void set_sync_enabled(bool enabled) { this->_sync = enabled; }
+        bool is_sync_enabled() { return this->_sync; }
+
+        void set_remote_enabled(bool enabled) { this->_remote = enabled; }
+        bool is_remote_enabled() { return this->_remote; }
+
+      protected:
+        bool _track;
+        bool _sync;
+        bool _remote;
     };
 }
+
+
+#endif // !MIDIDEVICE_H
+
 

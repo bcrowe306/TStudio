@@ -11,59 +11,36 @@
 #include <string>
 #include <filesystem>
 #include <vector>
+#include "library/Browser.h"
+#include <future>
 
 using namespace std::filesystem;
 using namespace ImGui;
+using std::async;
+using std::future;
 
 static  char searchText[64];
 
-
-
-void BuildDirectory(filesystem::path rootPath){
-  vector<path> subDirs;
-  vector<path> subFiles;
-  if(is_directory(rootPath)){
-    // build temp vector of directories and files
-    for(auto &entry: directory_iterator(rootPath)){
-      if(entry.is_directory()){
-        subDirs.push_back(entry.path());
-      }
-      else
-      {
-        if (choc::text::contains(choc::text::toLowerCase(entry.path().filename().string()), choc::text::toLowerCase(searchText)))
-          subFiles.push_back(entry.path());
-      }
-    }
-    // Build tree nodes
+void BuildDirectory(BrowserNode &browserNode){
+  if(is_directory(browserNode.filePath)){
     // Only build tree there are files
-    if (subFiles.size() > 0){
-      if (TreeNode(rootPath.filename().c_str())) {
-        for (auto &subDir : subDirs) {
-          BuildDirectory(subDir);
-        }
-        for (auto &subFile : subFiles) {
-          BuildDirectory(subFile);
+
+      if (TreeNode(browserNode.fileName.c_str()))
+      {
+        for (auto &node : browserNode.children){
+            BuildDirectory(node);
+
         }
         TreePop();
       }
-    } 
-    else {
-      if(subDirs.size() > 0){
-        for (auto &subDir : subDirs) {
-          BuildDirectory(subDir);
-        }
-      }
-    }
-      
   } else {
-    Selectable(rootPath.filename().c_str());
+    Selectable(browserNode.fileName.c_str());
   }
-  subDirs.clear();
-  subFiles.clear();
 }
 
 
-
+int selectedBrowserNodeIndex = 0;
+future<void> filterFuture;
 void Sidebar(std::shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Playhead> playhead, ImVec2 position, ImVec2 size) {
   // Sidebar Panel
   ImGui::SetNextWindowPos(position);
@@ -77,12 +54,24 @@ void Sidebar(std::shared_ptr<tstudio::Session> session, shared_ptr<tstudio::Play
         ImGui::PushStyleColor(ImGuiCol_ChildBg, U32FromHex(WINDOW_DARK_BACKGROUND_COLOR));
         ImGui::BeginChild("Browser");
             
-            InputText("Search", searchText, 64);
-            BuildDirectory(session->browser->rootDirectory);
+            auto searchTextInput = InputText("Search", searchText, 64);
+            auto &browserNode = session->browser->browserItems[selectedBrowserNodeIndex];
             
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
-      ImGui::EndTabItem();
+            if(searchTextInput){
+              auto searchTextString = string(choc::text::trimEnd(searchText));
+              if(searchTextString.size() > 3){
+                filterFuture = async(launch::async, &BrowserNode::setFilter, &browserNode, searchTextString);
+              }else{
+                filterFuture = async(launch::async, &BrowserNode::setFilter, &browserNode, "");
+              }
+              // browserNode.setFilter(std::string(searchText));
+              
+            }
+            BuildDirectory(browserNode);
+
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+            ImGui::EndTabItem();
     }
     if (ImGui::BeginTabItem("Devices", NULL)) {
       ImGui::EndTabItem();

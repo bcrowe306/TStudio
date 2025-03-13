@@ -1,5 +1,5 @@
 #ifndef CLIPDETAIL_H
-#define CLIPDETAILL_H
+#define CLIPDETAIL_H
 #include "core/MidiClip.h"
 #include "core/Playhead.h"
 #include "core/Session.h"
@@ -28,14 +28,16 @@ static void ClipDetail(shared_ptr<Playhead> playhead, MidiClipType clip) {
     auto beatCount = lengthPos.beat;
     auto tickCount = lengthPos.tick;
     ImGui::Indent(20.f);
-    ImGui::Text(clip->name.value.c_str());
+    ImGui::Text("%s", clip->name.value.c_str());
     auto barTextInput = ImGui::DragInt("Bars", &barCount, 1, 2);
     auto beatTextInput = ImGui::DragInt("Beats", &beatCount, 1, 0, 3);
     auto tickTextInput = ImGui::DragInt("Tick", &tickCount, 1, 0, 480);
     if (barTextInput) {
-      auto newLength = SongPosition::getTickCountFromSongPosition(
-          barCount, beatCount, tickCount, playhead->tpqn, playhead->time_sig);
-      clip->setLength(newLength);
+      if (barCount > 0) {
+        auto newLength = SongPosition::getTickCountFromSongPosition(
+            barCount, beatCount, tickCount, playhead->tpqn, playhead->time_sig);
+        clip->setLength(newLength);
+      }
     }
     if (beatTextInput) {
       auto newLength =SongPosition::getTickCountFromSongPosition(

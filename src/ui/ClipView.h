@@ -143,7 +143,7 @@ static void ClipView(shared_ptr<Session> session,
     auto minMaxNotes = clip->getNoteRange();
     auto noterange = minMaxNotes.second - minMaxNotes.first;
     DrawGrid(draw_list, origin, size, clip->getLength(), "1/16", noterange);
-    ImGui::Text(clip->name.value.c_str());
+    ImGui::Text("%s", clip->name.value.c_str());
     // Draw grid events
     DrawMidiEvents(draw_list, origin, size, clip);
     DrawPlayhead(draw_list, origin, size, clip);
